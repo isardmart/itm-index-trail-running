@@ -1,0 +1,55 @@
+name: New modifier proposal
+description: Propose a new variable (age, heat, sleep, HRV…) to make ITM more personal.
+labels: [modifier-proposal]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [docs/MODIFIERS.md](../blob/main/docs/MODIFIERS.md) and [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) first.
+        ITM **never** rewards pain, injury, fasting or weight loss, and default results never change.
+  - type: input
+    id: id
+    attributes:
+      label: Proposed id
+      placeholder: "heat"
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis
+      description: What should change in ITM, and why? Which hook — effort, decay, thresholds or readiness?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Peer-reviewed studies or recognised guidelines, with DOI or URL. Say how strong and how relevant to trail running they are.
+    validations:
+      required: true
+  - type: textarea
+    id: effect
+    attributes:
+      label: Expected effect
+      description: Direction and size, with bounds and defaults (e.g. "+0–5 % effort above 25 °C, capped").
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data needed
+      description: Which athlete, series or activity fields, and how an app would obtain them locally. Is any new input needed?
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Rules
+      options:
+        - label: It is off by default and a no-op when its data is missing.
+          required: true
+        - label: It cannot reward pain, injury, fasting, weight loss or unsafe exposure.
+          required: true
+        - label: It only uses data up to each day (causal) and needs no network.
+          required: true

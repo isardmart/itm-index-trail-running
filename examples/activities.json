@@ -1,0 +1,306 @@
+[
+  {
+    "date": "2026-06-02",
+    "type": "run",
+    "distance_m": 8000,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-06-04",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-06-06",
+    "type": "trail_run",
+    "distance_m": 16000,
+    "elevation_gain_m": 600,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-06-09",
+    "type": "run",
+    "distance_m": 8200,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-06-11",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-06-13",
+    "type": "trail_run",
+    "distance_m": 17200,
+    "elevation_gain_m": 660,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-06-16",
+    "type": "run",
+    "distance_m": 8400,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-06-18",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-06-20",
+    "type": "trail_run",
+    "distance_m": 18400,
+    "elevation_gain_m": 720,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-06-23",
+    "type": "run",
+    "distance_m": 8600,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-06-25",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-06-27",
+    "type": "trail_run",
+    "distance_m": 19600,
+    "elevation_gain_m": 780,
+    "altitude_m": 2100
+  },
+  {
+    "date": "2026-06-30",
+    "type": "run",
+    "distance_m": 8800,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-07-02",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-07-04",
+    "type": "trail_run",
+    "distance_m": 20800,
+    "elevation_gain_m": 840,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-07-07",
+    "type": "run",
+    "distance_m": 9000,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-07-09",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-07-11",
+    "type": "trail_run",
+    "distance_m": 22000,
+    "elevation_gain_m": 900,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-07-14",
+    "type": "run",
+    "distance_m": 9200,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-07-16",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-07-18",
+    "type": "trail_run",
+    "distance_m": 23200,
+    "elevation_gain_m": 960,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-07-21",
+    "type": "run",
+    "distance_m": 9400,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-07-23",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-07-25",
+    "type": "trail_run",
+    "distance_m": 24400,
+    "elevation_gain_m": 1020,
+    "altitude_m": 2100
+  },
+  {
+    "date": "2026-07-28",
+    "type": "run",
+    "distance_m": 9600,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-07-30",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-08-01",
+    "type": "trail_run",
+    "distance_m": 25600,
+    "elevation_gain_m": 1080,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-08-04",
+    "type": "run",
+    "distance_m": 9800,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-08-06",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-08-08",
+    "type": "trail_run",
+    "distance_m": 26800,
+    "elevation_gain_m": 1140,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-08-11",
+    "type": "run",
+    "distance_m": 10000,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-08-13",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-08-15",
+    "type": "trail_run",
+    "distance_m": 28000,
+    "elevation_gain_m": 1200,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-08-18",
+    "type": "run",
+    "distance_m": 10200,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-08-20",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-08-22",
+    "type": "trail_run",
+    "distance_m": 29200,
+    "elevation_gain_m": 1260,
+    "altitude_m": 2100
+  },
+  {
+    "date": "2026-08-25",
+    "type": "run",
+    "distance_m": 10400,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-08-27",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-08-29",
+    "type": "trail_run",
+    "distance_m": 30400,
+    "elevation_gain_m": 1320,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-09-01",
+    "type": "run",
+    "distance_m": 10600,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-09-03",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-09-05",
+    "type": "trail_run",
+    "distance_m": 31600,
+    "elevation_gain_m": 1380,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-09-08",
+    "type": "run",
+    "distance_m": 10800,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-09-10",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-09-12",
+    "type": "trail_run",
+    "distance_m": 32800,
+    "elevation_gain_m": 1440,
+    "altitude_m": 900
+  },
+  {
+    "date": "2026-09-15",
+    "type": "run",
+    "distance_m": 11000,
+    "elevation_gain_m": 150
+  },
+  {
+    "date": "2026-09-17",
+    "type": "strength",
+    "distance_m": null,
+    "elevation_gain_m": null
+  },
+  {
+    "date": "2026-09-19",
+    "type": "trail_run",
+    "distance_m": 34000,
+    "elevation_gain_m": 1500,
+    "altitude_m": 2100
+  }
+]

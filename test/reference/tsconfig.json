@@ -1,0 +1,7 @@
+{
+  "//": "The frozen reference was written for a less strict tsconfig; the golden test that imports it is checked here.",
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "noUncheckedIndexedAccess": false },
+  "include": [".", "../golden.test.ts"],
+  "exclude": []
+}

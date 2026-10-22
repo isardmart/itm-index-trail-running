@@ -1,0 +1,43 @@
+name: Bug report
+description: Something computes wrongly, crashes, or does not install.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Please **do not paste personal or health data**. A minimal, anonymised list of activities is enough.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Code and a small anonymised input (activities, config patch, modifiers) that reproduce it.
+      render: ts
+    validations:
+      required: true
+  - type: dropdown
+    id: defaults
+    attributes:
+      label: Does it happen with the default config and no modifiers?
+      options:
+        - "Yes (possible parity issue with isardtrail.com)"
+        - "No, only with a custom config or modifiers"
+        - "Not sure"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version / commit
+      placeholder: "1.0.0 or a commit sha"
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Node 20.11, macOS — or Chrome 129"

@@ -15,10 +15,10 @@ export type LocaleInput = LocaleCode | ItmLocale;
 export function resolveLocale(locale: LocaleInput | undefined): ItmLocale {
   if (locale === undefined) return en;
   if (typeof locale === "string") {
-    const found = LOCALES[locale];
-    if (!found)
-      throw new Error(`Unknown ITM locale "${String(locale)}". Built-in: ${Object.keys(LOCALES).join(", ")}.`);
-    return found;
+    // Own keys only: "toString" or "constructor" are not locales.
+    if (!Object.hasOwn(LOCALES, locale))
+      throw new Error(`Unknown ITM locale "${locale}". Built-in: ${Object.keys(LOCALES).join(", ")}.`);
+    return LOCALES[locale];
   }
   return locale;
 }

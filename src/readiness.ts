@@ -62,7 +62,7 @@ export type ReadinessMetrics = {
   races: { date: DateOnly; key: ItmKey }[];
 };
 
-export type ReadinessOptions = EngineOptions & { locale?: LocaleInput };
+export type ReadinessOptions = EngineOptions & { locale?: LocaleInput | undefined };
 
 /** Metrics of the windows that end on `date`. */
 export function readinessMetrics(input: ReadinessInput, date: DateOnly): ReadinessMetrics {

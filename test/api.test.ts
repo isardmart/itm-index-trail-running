@@ -13,6 +13,7 @@ import {
   en,
   fromStravaActivity,
   isDateOnly,
+  toDateOnly,
   levels,
   mergeItmConfig,
   readinessFor,
@@ -21,7 +22,10 @@ import {
   stravaCategory,
   validateItmConfig,
   weekStart,
+  type AltitudeStay,
+  type ItmActivity,
   type ItmLocale,
+  type ReadinessInput,
 } from "../src/index";
 import { REAL_HISTORY } from "./history.fixture";
 
@@ -110,7 +114,7 @@ describe("createItm", () => {
     expect(itm.raceKey(80)).toBe("100k");
     expect(itm.zoneForItm(900).key).toBe("ridges");
     expect(itm.nextZone(itm.zones[4]!)!.key).toBe("summit");
-    const stays = [{ start: "2026-01-01", end: "2026-01-03", altitude_m: 2500 }];
+    const stays: AltitudeStay[] = [{ start: "2026-01-01", end: "2026-01-03", altitude_m: 2500 }];
     expect(itm.altitudeStayCut("2026-01-02", stays)).toBeCloseTo(0.3);
     const series = itm.simulateItm(REAL_HISTORY, "2026-09-06", { baseline: { date: "2025-05-01", itm: 0 } });
     expect(itm.itmOn(series, "2026-09-06")).toBe(series.at(-1)!.itm);
@@ -157,7 +161,7 @@ describe("readiness standalone", () => {
     expect(readyFor("2026-01-01", 2000, input)).toBeNull();
   });
   it("formats the support average with the locale", () => {
-    const input = { sessions: [], supportWeeks: [{ week: "2025-12-29", count: 12 }], races: [] };
+    const input: ReadinessInput = { sessions: [], supportWeeks: [{ week: "2025-12-29", count: 12 }], races: [] };
     expect(
       readinessFor("100m", "2026-01-01", 0, input, { locale: "ca" }).requirements.find((q) => q.key === "support"),
     ).toMatchObject({ have: "1,5", need: "1,5", ok: true });
@@ -172,16 +176,17 @@ describe("locales", () => {
   it("built-ins and custom locales", () => {
     expect(Object.keys(LOCALES)).toEqual(["en", "ca"]);
     const shout: ItmLocale = { ...en, code: "en", noLevel: "NONE", events: { ...en.events, weeklyDecay: "DECAY" } };
-    const acts = [{ date: "2026-01-01", type: "trail_run" as const, distance_m: 30_000, elevation_gain_m: 0 }];
+    const acts: ItmActivity[] = [{ date: "2026-01-01", type: "trail_run", distance_m: 30_000, elevation_gain_m: 0 }];
     const itm = createItm({ locale: shout });
     const s = itm.simulateItm(acts, "2026-01-30", { baseline: { date: "2025-12-30", itm: 230 } });
     expect(itm.itmEvents(s, acts).map((e) => e.label)).toEqual(
       expect.arrayContaining(["Category run 20K", "Level 50K", "DECAY", "Down to 20K"]),
     );
     expect(() => createItm({ locale: "xx" as "en" })).toThrow(/Unknown ITM locale/);
+    expect(() => createItm({ locale: "toString" as "en" })).toThrow(/Unknown ITM locale/);
   });
   it("altitude labels", () => {
-    const acts = [
+    const acts: ItmActivity[] = [
       { date: "2026-01-01", type: "trail_run" as const, distance_m: 30_000, elevation_gain_m: 0, altitude_m: 2500 },
       { date: "2026-01-02", type: "run" as const, distance_m: 10_000, elevation_gain_m: 0, altitude_m: 2500 },
     ];
@@ -270,6 +275,9 @@ describe("dates", () => {
     expect(isDateOnly("2026-02-29")).toBe(false);
     expect(isDateOnly("2028-02-29")).toBe(true);
     expect(isDateOnly("2026-1-1")).toBe(false);
+    expect(isDateOnly(20260101)).toBe(false);
+    expect(toDateOnly("2026-10-21")).toBe("2026-10-21");
+    expect(() => toDateOnly("2026-02-30")).toThrow(RangeError);
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(daysBetween("2026-01-01", "2025-12-25")).toBe(-7);
     expect(weekStart("2026-10-21")).toBe("2026-10-19");

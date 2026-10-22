@@ -1,4 +1,5 @@
 import { addDays, weekStart, type ActivityType, type AltitudeStay, type ItmActivity, type ItmKey } from "../src/index";
+import type { DateOnly, ItmBaseline } from "../src/index";
 import type { ReadinessInput } from "../src/index";
 import type { TimedActivity } from "../src/index";
 
@@ -23,10 +24,10 @@ export type Rng = ReturnType<typeof rng>;
 export type GeneratedHistory = {
   activities: ItmActivity[];
   stays: AltitudeStay[];
-  baseline: { date: string; itm: number };
-  until: string;
+  baseline: ItmBaseline;
+  until: DateOnly;
   readiness: ReadinessInput;
-  sampleDates: string[];
+  sampleDates: DateOnly[];
 };
 
 const SUPPORT: ActivityType[] = ["strength", "mobility", "swim", "hike", "other", "rest"];

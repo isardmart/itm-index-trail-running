@@ -78,7 +78,7 @@ for (const [name, config, n] of CONFIGS) {
       "real history (fixture): series, events, readiness every day",
       () => {
         useRef();
-        const baseline = { date: "2025-05-01", itm: 0 };
+        const baseline: pkg.ItmBaseline = { date: "2025-05-01", itm: 0 };
         const until = "2026-10-21";
         const mine = pkg.simulateItm(REAL_HISTORY, until, { baseline, config });
         const theirs = ref.simulateItm(REAL_HISTORY, until, baseline);

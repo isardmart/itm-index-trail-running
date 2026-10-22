@@ -14,15 +14,15 @@ import {
   type ResolvedModifier,
 } from "./modifiers/runtime";
 import type { AthleteProfile, ModifierUse } from "./modifiers/types";
-import type { ActivityType, AltitudeStay, ItmActivity, ItmBaseline, ItmDay } from "./types";
+import type { ActivityType, AltitudeStay, ItmActivity, ItmBaseline, ItmDay, LevelIndex } from "./types";
 
 /** Options shared by every function that depends on the config and, optionally, on modifiers. */
 export type EngineOptions = {
-  config?: Readonly<ItmConfig>;
+  config?: Readonly<ItmConfig> | undefined;
   /** Community variables. All are off unless listed here. */
-  modifiers?: readonly ModifierUse[];
+  modifiers?: readonly ModifierUse[] | undefined;
   /** Local-only athlete data for the modifiers. Never required, never sent anywhere. */
-  athlete?: AthleteProfile;
+  athlete?: AthleteProfile | undefined;
 };
 
 /** Everything resolved once: config, levels, modifiers and the athlete timeline. Internal. */
@@ -154,11 +154,11 @@ export function thresholdsOn(e: Engine, date: DateOnly): number[] {
   return ITM_KEYS.map((key, i) => e.levels[i]!.threshold * thresholdFactor(e.mods, e.athlete, key, date));
 }
 
-function nextLevel(level: number, itm: number, thresholds: readonly number[], cushion: number): number {
-  let l = level;
+function nextLevel(level: LevelIndex, itm: number, thresholds: readonly number[], cushion: number): LevelIndex {
+  let l: number = level;
   while (l < thresholds.length && itm >= thresholds[l]!) l++;
   while (l > 0 && itm < thresholds[l - 1]! * cushion) l--;
-  return l;
+  return l as LevelIndex; // 0 ≤ l ≤ thresholds.length (5)
 }
 
 /** Next level to reach (null at the top) and the ITM still missing. */
@@ -179,9 +179,9 @@ export type SimulateOptions = EngineOptions & {
    * Start of the series and the ITM then. Default: the first activity date, ITM 0. If an activity is earlier than
    * the baseline date, the series starts there at 0.
    */
-  baseline?: ItmBaseline;
+  baseline?: ItmBaseline | undefined;
   /** Nights slept at altitude. */
-  stays?: readonly AltitudeStay[];
+  stays?: readonly AltitudeStay[] | undefined;
 };
 
 /** Daily ITM series from the baseline (or the first activity, if earlier) to `until`, inclusive. */
@@ -285,7 +285,7 @@ export function itmDeltas(series: readonly ItmDay[]): { day: DateOnly; points: n
 
 export type ItmEvent = { day: DateOnly; kind: "session" | "decay" | "level"; delta: number; label: string };
 
-export type EventsOptions = EngineOptions & { locale?: LocaleInput };
+export type EventsOptions = EngineOptions & { locale?: LocaleInput | undefined };
 
 /** Events that explain the series: sessions that add, weekly decay (≥ 1) and level changes. */
 export function itmEvents(

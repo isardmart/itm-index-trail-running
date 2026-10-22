@@ -1,15 +1,16 @@
+import { toDateOnly } from "./dates";
 import type { ActivityType, ItmActivity } from "./types";
 
 /** The fields of a Strava "summary activity" this package reads. */
 export type StravaSummaryActivity = {
   type: string;
-  sport_type?: string;
+  sport_type?: string | undefined;
   start_date_local: string;
   distance: number;
   total_elevation_gain: number;
   /** Highest and lowest points (m) of the activity. */
-  elev_high?: number | null;
-  elev_low?: number | null;
+  elev_high?: number | null | undefined;
+  elev_low?: number | null | undefined;
 };
 
 export type StravaCategory = "trail" | "run" | "hike" | "ride" | "swim" | "strength" | "mobility" | "other";
@@ -48,7 +49,7 @@ export const IMPORTED_STRAVA_CATEGORIES: ReadonlySet<StravaCategory> = new Set([
 ]);
 
 /** Altitude of an activity: the midpoint between its lowest and highest points, clamped to −500..9000 m. */
-export function stravaAltitude(a: { elev_high?: number | null; elev_low?: number | null }): number | null {
+export function stravaAltitude(a: Pick<StravaSummaryActivity, "elev_high" | "elev_low">): number | null {
   const { elev_high: high, elev_low: low } = a;
   if (typeof high !== "number" || typeof low !== "number" || !Number.isFinite(high) || !Number.isFinite(low))
     return null;
@@ -62,7 +63,7 @@ export type FromStravaOptions = {
    * Also map categories isardtrail.com does not import (rides and others become `other`, a support session; hikes
    * become `hike`). Default false: they return null, as on the site.
    */
-  includeAllCategories?: boolean;
+  includeAllCategories?: boolean | undefined;
 };
 
 /** Converts a Strava summary activity to an ITM activity (or null for categories that are not imported). */
@@ -70,7 +71,7 @@ export function fromStravaActivity(a: StravaSummaryActivity, options: FromStrava
   const category = stravaCategory(a.type, a.sport_type);
   if (!options.includeAllCategories && !IMPORTED_STRAVA_CATEGORIES.has(category)) return null;
   return {
-    date: a.start_date_local.slice(0, 10),
+    date: toDateOnly(a.start_date_local.slice(0, 10)),
     type: TYPE_BY_CATEGORY[category],
     distance_m: clamp(a.distance, 1_000_000),
     elevation_gain_m: clamp(a.total_elevation_gain, 30_000),

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { DateOnly } from "../src/index";
 import { addDays, createItm, readinessMetrics, type ReadinessInput } from "../src/index";
 
 // Adapted from ultra_trail_run: functions bound to an explicit config (the defaults).
 const { raceKey, readinessFor, readyFor } = createItm();
 
-const s = (date: string, effort: number, extra: Partial<{ night: boolean; sleptOut: boolean }> = {}) => ({
+const s = (date: DateOnly, effort: number, extra: Partial<{ night: boolean; sleptOut: boolean }> = {}) => ({
   date,
   effort,
   night: false,
@@ -13,7 +14,7 @@ const s = (date: string, effort: number, extra: Partial<{ night: boolean; sleptO
 });
 
 /** 12 setmanes de 3 sortides (10, 12 i una llarga de 30): ~52 km esforç per setmana. */
-function block(until: string): ReadinessInput["sessions"] {
+function block(until: DateOnly): ReadinessInput["sessions"] {
   const out: ReadinessInput["sessions"] = [];
   for (let w = 0; w < 12; w++) {
     const monday = addDays(until, -7 * (w + 1) + 1);

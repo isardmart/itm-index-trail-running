@@ -22,3 +22,8 @@ First release, extracted from the isardtrail.com engine
 - Modifier system with validation, clamping, causal athlete views and a body-mass guard; built-ins `age` and
   `carried-load` (off by default); `heat` and `hrv` proposals; `MODIFIER_REGISTRY`.
 - Golden parity test against the frozen original engine; calibration test.
+- Strict public types: `DateOnly` is a `YYYY-MM-DD` template literal type (`isDateOnly` guard, `toDateOnly`
+  assertion), `ItmKey` is derived from `ITM_KEYS`, `ItmDay.level` is `LevelIndex` (0–5), the `Itm` instance is
+  read-only and its functions can be destructured, `withParams` type-checks modifier params, and the runtime
+  validators (`validateModifier`, `validateAthleteProfile`) take `unknown`. Built with `exactOptionalPropertyTypes`
+  and `typescript-eslint` `strictTypeChecked`; type-level tests in `test/types.test-d.ts`.

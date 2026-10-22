@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import type { DateOnly, ItmBaseline } from "../src/index";
 import { describe, expect, it } from "vitest";
 import {
   BODY_MASS_MULTIPLIER_MAX,
@@ -21,6 +22,7 @@ import {
   simulateItm,
   validateAthleteProfile,
   validateModifier,
+  withParams,
   type AthleteProfile,
   type ItmActivity,
   type ItmModifier,
@@ -29,8 +31,8 @@ import {
 import { generateHistory } from "./generator";
 import { REAL_HISTORY } from "./history.fixture";
 
-const baseline = { date: "2025-05-01", itm: 0 };
-const run = (date: string, km: number, gain = 0, extra: Partial<ItmActivity> = {}): ItmActivity => ({
+const baseline: ItmBaseline = { date: "2025-05-01", itm: 0 };
+const run = (date: DateOnly, km: number, gain = 0, extra: Partial<ItmActivity> = {}): ItmActivity => ({
   date,
   type: "trail_run",
   distance_m: km * 1000,
@@ -90,12 +92,14 @@ describe("validation", () => {
     expect(errors.join("\n")).toMatch(/unknown hook "rewardMe"/);
     expect(errors.join("\n")).toMatch(/param k: default must be within/);
     expect(errors.join("\n")).toMatch(/param j needs finite/);
-    expect(validateModifier(base({ hooks: { effortMultiplier: 3 as unknown as () => number } }))[0]).toMatch(
-      /must be a function/,
-    );
-    expect(
-      validateModifier(base({ inputs: [{ source: "nowhere", field: "x" } as unknown as ItmModifier["inputs"][0]] })),
-    ).toHaveLength(1);
+    // Validation takes `unknown`: plain-JS definitions are checked field by field.
+    expect(validateModifier({ ...base(), hooks: { effortMultiplier: 3 } })[0]).toMatch(/must be a function/);
+    expect(validateModifier({ ...base(), inputs: [{ source: "nowhere", field: "x" }] })).toHaveLength(1);
+    expect(validateModifier({ ...base(), inputs: [null] })).toHaveLength(1);
+    expect(validateModifier({ ...base(), inputs: "age" }).join()).toMatch(/inputs must be an array/);
+    expect(validateModifier({ ...base(), references: [42] }).join()).toMatch(/42 must be an https URL/);
+    expect(validateModifier({ ...base(), params: { k: 3 } }).join()).toMatch(/param k needs finite/);
+    expect(validateModifier(null)).toHaveLength(7); // id, version, name, description, references, inputs, hooks
   });
 
   it("never allows a variable built around pain, injury, fasting or weight loss", () => {
@@ -125,6 +129,8 @@ describe("validation", () => {
       /between 1 and 1.5/,
     );
     expect(() => createItm({ modifiers: [{ modifier: ageModifier, params: { nope: 1 } }] })).toThrow(/unknown param/);
+    expect(() => createItm({ modifiers: [withParams(ageModifier, { decayMax: 9 })] })).toThrow(/between 1 and 1.5/);
+    expect(createItm({ modifiers: [withParams(ageModifier, { mastersFrom: 40 })] }).config).toBe(DEFAULT_ITM_CONFIG);
     expect(() => defineModifier(base({ version: "x" }))).toThrow(ItmModifierError);
   });
 
@@ -132,11 +138,17 @@ describe("validation", () => {
     expect(validateAthleteProfile(undefined)).toEqual([]);
     const errors = validateAthleteProfile({
       age: 300,
-      sex: "x" as "male",
+      sex: "x",
       birthDate: "1980-13-01",
-      series: { sleepHours: [{ date: "2026-01-01", value: NaN }], stress: [] } as AthleteProfile["series"],
+      series: { sleepHours: [{ date: "2026-01-01", value: NaN }], stress: [], hrvRmssd: undefined },
     });
     expect(errors).toHaveLength(5); // age, sex, birthDate, NaN entry, unknown series
+    expect(validateAthleteProfile("me")).toEqual(["athlete must be an object."]);
+    expect(validateAthleteProfile({ series: 3 })).toEqual(["athlete.series must be an object."]);
+    expect(validateAthleteProfile({ series: { sleepHours: "8h" } })).toEqual([
+      "athlete.series.sleepHours must be an array.",
+    ]);
+    expect(validateAthleteProfile({ series: { sleepHours: [null] } })).toHaveLength(1);
     expect(() => createItm({ athlete: { bodyMassKg: 5 } })).toThrow(ItmModifierError);
   });
 
@@ -224,6 +236,7 @@ describe("clamping", () => {
     const brokenStr = base({
       hooks: {
         decayMultiplier: () => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error -- plain-JS modifiers can throw anything
           throw "bad";
         },
       },
@@ -252,7 +265,7 @@ describe("causality and determinism", () => {
     },
   });
 
-  const athleteUntil = (until: string): AthleteProfile => {
+  const athleteUntil = (until: DateOnly): AthleteProfile => {
     const values = (n: number) =>
       Array.from({ length: 900 }, (_, i) => ({ date: addDays("2025-05-01", i), value: n + (i % 7) })).filter(
         (v) => v.date <= until,
@@ -266,7 +279,7 @@ describe("causality and determinism", () => {
   it("adding future activities and future data never changes past days", () => {
     const cut = "2026-03-01";
     const pastActs = REAL_HISTORY.filter((a) => a.date <= cut);
-    const opts = (until: string) => ({ baseline, modifiers: [snoop, ageModifier], athlete: athleteUntil(until) });
+    const opts = (until: DateOnly) => ({ baseline, modifiers: [snoop, ageModifier], athlete: athleteUntil(until) });
     const past = simulateItm(pastActs, cut, opts(cut));
     const full = simulateItm(REAL_HISTORY, "2026-10-21", opts("2027-12-31"));
     expect(full.slice(0, past.length)).toEqual(past);
@@ -276,7 +289,12 @@ describe("causality and determinism", () => {
     for (let seed = 1; seed <= 25; seed++) {
       const h = generateHistory(seed);
       const cut = addDays(h.until, -40);
-      const o = (u: string) => ({ baseline: h.baseline, stays: h.stays, modifiers: [snoop], athlete: athleteUntil(u) });
+      const o = (u: DateOnly) => ({
+        baseline: h.baseline,
+        stays: h.stays,
+        modifiers: [snoop],
+        athlete: athleteUntil(u),
+      });
       const past = simulateItm(
         h.activities.filter((a) => a.date <= cut),
         cut,
@@ -339,7 +357,7 @@ describe("causality and determinism", () => {
 
 describe("body mass guard", () => {
   const acts = [run("2026-03-01", 30, 0, { carriedLoadKg: 6 })];
-  const gainWith = (athlete: AthleteProfile, date = "2026-03-01") =>
+  const gainWith = (athlete: AthleteProfile, date: DateOnly = "2026-03-01") =>
     simulateItm(
       acts.map((a) => ({ ...a, date })),
       date,

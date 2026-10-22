@@ -6,10 +6,11 @@
  * module-level state.
  */
 
-export type ItmKey = "20k" | "50k" | "100k" | "100m" | "utmb";
-
 /** Level keys, lowest to highest. */
-export const ITM_KEYS: readonly ItmKey[] = Object.freeze(["20k", "50k", "100k", "100m", "utmb"] as ItmKey[]);
+export const ITM_KEYS = Object.freeze(["20k", "50k", "100k", "100m", "utmb"] as const);
+
+/** A race category: `"20k" | "50k" | "100k" | "100m" | "utmb"`. */
+export type ItmKey = (typeof ITM_KEYS)[number];
 
 export type ItmLevelParams = {
   /** ITM at which you have the fitness of this level. */
@@ -143,7 +144,7 @@ const OPTIONAL_RULES = ["backToBack", "nights", "sleptOut", "support", "previous
 
 /** Applies a patch on top of a config, without modifying either. */
 export function mergeItmConfig(base: Readonly<ItmConfig>, patch: ItmConfigPatch | null | undefined): ItmConfig {
-  if (!patch) return base as ItmConfig;
+  if (!patch) return base;
   const { levels, readiness, ...scalars } = patch;
   const defined = <T extends object>(o: T) =>
     Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { DateOnly, ItmBaseline } from "../src/index";
 import {
   DEFAULT_ITM_CONFIG,
   altitudeStayCut as stayCutWith,
@@ -19,11 +20,11 @@ import {
 // Adapted from ultra_trail_run: there are no live bindings any more. Every function takes the config explicitly
 // (here the defaults), and "changing the config" means building a new `createItm` instance.
 const config = DEFAULT_ITM_CONFIG;
-const baseline = { date: "2025-05-01", itm: 0 };
-const simulateItm = (acts: ItmActivity[], until: string, _?: undefined, stays: AltitudeStay[] = []) =>
+const baseline: ItmBaseline = { date: "2025-05-01", itm: 0 };
+const simulateItm = (acts: ItmActivity[], until: DateOnly, _?: undefined, stays: AltitudeStay[] = []) =>
   simulate(acts, until, { baseline, config, stays });
 const altitudeTrainingBonus = (alt: number) => bonusWith(alt, config);
-const altitudeStayCut = (date: string, stays: AltitudeStay[]) => stayCutWith(date, stays, config);
+const altitudeStayCut = (date: DateOnly, stays: AltitudeStay[]) => stayCutWith(date, stays, config);
 
 describe("configuració de l'ITM", () => {
   it("els valors per defecte són els calibrats i vàlids", () => {
@@ -61,7 +62,7 @@ describe("configuració de l'ITM", () => {
   });
 
   it("canviar-la mou nivells, franges, colors i requisits, i el càlcul de l'ITM", () => {
-    const acts = [{ date: "2026-01-01", type: "trail_run" as const, distance_m: 30_000, elevation_gain_m: 1000 }];
+    const acts: ItmActivity[] = [{ date: "2026-01-01", type: "trail_run", distance_m: 30_000, elevation_gain_m: 1000 }];
     const before = simulateItm(acts, "2026-01-20").at(-1)!.itm;
     // Adapted: instead of setItmConfig(...), a new instance bound to the new config.
     const itm = createItm({
@@ -85,8 +86,8 @@ describe("configuració de l'ITM", () => {
 });
 
 describe("altitud", () => {
-  const run = (altitude_m: number | null) => [
-    { date: "2026-01-01", type: "trail_run" as const, distance_m: 25_000, elevation_gain_m: 1000, altitude_m },
+  const run = (altitude_m: number | null): ItmActivity[] => [
+    { date: "2026-01-01", type: "trail_run", distance_m: 25_000, elevation_gain_m: 1000, altitude_m },
   ];
 
   it("una sortida per sobre de 1.500 m suma més, amb un màxim", () => {
@@ -100,7 +101,7 @@ describe("altitud", () => {
   });
 
   it("dormir en altitud frena la baixada mentre s'hi és i unes setmanes després, i a casa no", () => {
-    const stays = [{ start: "2026-01-05", end: "2026-01-11", altitude_m: 2500 }];
+    const stays: AltitudeStay[] = [{ start: "2026-01-05", end: "2026-01-11", altitude_m: 2500 }];
     expect(altitudeStayCut("2026-01-04", stays)).toBe(0);
     expect(altitudeStayCut("2026-01-08", stays)).toBeCloseTo(0.3);
     const after = altitudeStayCut("2026-01-18", stays);
@@ -119,8 +120,8 @@ describe("altitud", () => {
 });
 
 describe("suport (força, mobilitat, natació)", () => {
-  const run = { date: "2026-01-01", type: "trail_run" as const, distance_m: 30_000, elevation_gain_m: 1000 };
-  const strength = (date: string) => ({ date, type: "strength" as const, distance_m: null, elevation_gain_m: null });
+  const run: ItmActivity = { date: "2026-01-01", type: "trail_run", distance_m: 30_000, elevation_gain_m: 1000 };
+  const strength = (date: DateOnly) => ({ date, type: "strength" as const, distance_m: null, elevation_gain_m: null });
 
   it("el fre s'esvaeix a poc a poc: cap salt brusc quan fa una setmana de l'última sessió", () => {
     const s = simulateItm([run, strength("2026-01-04")], "2026-01-30");

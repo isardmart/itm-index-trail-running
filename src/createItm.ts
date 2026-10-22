@@ -14,6 +14,7 @@ import {
   shortRunWith,
   simulateWith,
   type ItmEvent,
+  type SimulateOptions,
 } from "./engine";
 import type { ItmLevel } from "./levels";
 import { resolveLocale, type ItmLocale, type LocaleInput } from "./locales";
@@ -27,23 +28,23 @@ import {
   type ReadinessInput,
   type ReadinessMetrics,
 } from "./readiness";
-import type { AltitudeStay, ItmActivity, ItmBaseline, ItmDay } from "./types";
+import type { AltitudeStay, ItmActivity, ItmDay } from "./types";
 import { nextZone, zoneForItm, zones as zonesOf, type Zone } from "./zones";
 
 export type CreateItmOptions = {
   /** Full config (default `DEFAULT_ITM_CONFIG`). Validated: an invalid one throws `ItmConfigError`. */
-  config?: Readonly<ItmConfig>;
+  config?: Readonly<ItmConfig> | undefined;
   /**
    * Partial patch applied on top of `config` (e.g. what `diffFromDefault` stored). Kept separate from `config` on
    * purpose: in a patch a missing field means "unchanged", in a full config it means "absent".
    */
-  patch?: ItmConfigPatch | null;
+  patch?: ItmConfigPatch | null | undefined;
   /** "en" (default), "ca", or a custom `ItmLocale`. */
-  locale?: LocaleInput;
+  locale?: LocaleInput | undefined;
   /** Community variables (all off unless listed). */
-  modifiers?: readonly ModifierUse[];
+  modifiers?: readonly ModifierUse[] | undefined;
   /** Local-only athlete data for the modifiers. */
-  athlete?: AthleteProfile;
+  athlete?: AthleteProfile | undefined;
 };
 
 type EffortInput = Pick<ItmActivity, "type" | "distance_m" | "elevation_gain_m">;
@@ -56,28 +57,28 @@ export type Itm = {
   /** Mountain bands (presentation only). */
   readonly zones: readonly Zone[];
   kmEffort: typeof kmEffort;
-  simulateItm(
+  simulateItm: (
     activities: readonly ItmActivity[],
     until: DateOnly,
-    options?: { baseline?: ItmBaseline; stays?: readonly AltitudeStay[] },
-  ): ItmDay[];
+    options?: Pick<SimulateOptions, "baseline" | "stays">,
+  ) => ItmDay[];
   itmOn: typeof itmOn;
   itmDeltas: typeof itmDeltas;
-  itmEvents(series: readonly ItmDay[], activities: readonly ItmActivity[]): ItmEvent[];
+  itmEvents: (series: readonly ItmDay[], activities: readonly ItmActivity[]) => ItmEvent[];
   /** Next level and ITM missing; with modifiers, `date` selects the day's (scaled) thresholds. */
-  nextItmLevel(itm: number, date?: DateOnly): { level: ItmLevel; missing: number } | null;
-  sessionCategory(effort: number): ItmLevel | null;
-  qualifyingEffort(a: EffortInput): number | null;
-  shortRunEffort(a: EffortInput): number | null;
-  countedEffort(a: EffortInput): number | null;
-  altitudeTrainingBonus(altitude: number | null | undefined): number;
-  altitudeStayCut(date: DateOnly, stays: readonly AltitudeStay[]): number;
-  readinessMetrics(input: ReadinessInput, date: DateOnly): ReadinessMetrics;
-  readinessFor(key: ItmKey, date: DateOnly, itm: number, input: ReadinessInput): Readiness;
-  readyFor(date: DateOnly, itm: number, input: ReadinessInput): ItmLevel | null;
-  raceKey(effort: number): ItmKey | null;
-  zoneForItm(itm: number): Zone;
-  nextZone(zone: Zone): Zone | null;
+  nextItmLevel: (itm: number, date?: DateOnly) => { level: ItmLevel; missing: number } | null;
+  sessionCategory: (effort: number) => ItmLevel | null;
+  qualifyingEffort: (a: EffortInput) => number | null;
+  shortRunEffort: (a: EffortInput) => number | null;
+  countedEffort: (a: EffortInput) => number | null;
+  altitudeTrainingBonus: (altitude: number | null | undefined) => number;
+  altitudeStayCut: (date: DateOnly, stays: readonly AltitudeStay[]) => number;
+  readinessMetrics: (input: ReadinessInput, date: DateOnly) => ReadinessMetrics;
+  readinessFor: (key: ItmKey, date: DateOnly, itm: number, input: ReadinessInput) => Readiness;
+  readyFor: (date: DateOnly, itm: number, input: ReadinessInput) => ItmLevel | null;
+  raceKey: (effort: number) => ItmKey | null;
+  zoneForItm: (itm: number) => Zone;
+  nextZone: (zone: Zone) => Zone | null;
 };
 
 /**

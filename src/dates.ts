@@ -1,20 +1,29 @@
 /**
  * Calendar dates as `"YYYY-MM-DD"` strings, with no time zone. Every computation runs in UTC so that a training day
  * is always the same day, wherever the code runs.
+ *
+ * The template literal type rejects obvious mistakes at compile time (`"yesterday"`, `new Date()`); a `string` that
+ * comes from JSON or a form has to go through `isDateOnly` or `toDateOnly` first, which also check the calendar.
  */
-export type DateOnly = string;
+export type DateOnly = `${number}-${number}-${number}`;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Whether a string is a real calendar date in `YYYY-MM-DD` form. */
-export function isDateOnly(value: string): value is DateOnly {
-  if (!DATE_RE.test(value)) return false;
+/** Whether a value is a real calendar date in `YYYY-MM-DD` form. */
+export function isDateOnly(value: unknown): value is DateOnly {
+  if (typeof value !== "string" || !DATE_RE.test(value)) return false;
   const d = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
+/** The value as a `DateOnly`. Throws a `RangeError` when it is not a real `YYYY-MM-DD` date. */
+export function toDateOnly(value: string): DateOnly {
+  if (!isDateOnly(value)) throw new RangeError(`"${value}" is not a YYYY-MM-DD calendar date.`);
+  return value;
+}
+
 const toUtc = (date: DateOnly): Date => new Date(`${date}T00:00:00Z`);
-const fromUtc = (d: Date): DateOnly => d.toISOString().slice(0, 10);
+const fromUtc = (d: Date): DateOnly => d.toISOString().slice(0, 10) as DateOnly;
 
 /** `date` plus `days` calendar days (negative to go back). */
 export function addDays(date: DateOnly, days: number): DateOnly {

@@ -9,10 +9,12 @@ import type {
   AthleteView,
   DatedValue,
   ExtraRequirement,
+  InputSpec,
   ItmModifier,
   ItmStateView,
   ModifierParams,
   ModifierUse,
+  ProfileSeriesKey,
   ScalableRequirement,
   SeriesKey,
   SeriesView,
@@ -37,6 +39,7 @@ const ATHLETE_FIELDS: readonly AthleteField[] = [
   "homeAltitude",
 ];
 const SERIES_KEYS: readonly SeriesKey[] = ["restingHr", "sleepHours", "hrvRmssd"];
+const PROFILE_SERIES_KEYS: readonly ProfileSeriesKey[] = [...SERIES_KEYS, "bodyMassKg"];
 const ACTIVITY_FIELDS: readonly ActivityField[] = ["altitude_m", "carriedLoadKg", "temperatureC"];
 const HOOKS = ["effortMultiplier", "decayMultiplier", "thresholdMultiplier", "readinessRequirements"] as const;
 const SCALABLE: readonly ScalableRequirement[] = ["longest", "backToBack", "accumulated", "support"];
@@ -64,56 +67,78 @@ export class ItmModifierError extends Error {
   }
 }
 
-const usesBodyMass = (m: ItmModifier) => m.inputs.some((i) => i.field === "bodyMassKg");
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+const isFiniteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const usesBodyMass = (inputs: readonly unknown[]) => inputs.some((i) => isRecord(i) && i.field === "bodyMassKg");
 
-/** Errors of a modifier definition (empty when it can be used). */
-export function validateModifier(m: ItmModifier): string[] {
+type FieldOf = { [S in InputSpec["source"]]: Extract<InputSpec, { source: S }>["field"] };
+
+/** Fields of the inputs of one source, typed by that source (optionally only the required ones). */
+function inputFields<S extends InputSpec["source"]>(
+  inputs: readonly InputSpec[],
+  source: S,
+  requiredOnly = false,
+): FieldOf[S][] {
+  const out: FieldOf[S][] = [];
+  // The `source` check is what narrows `field`; TypeScript cannot follow it through the generic.
+  for (const i of inputs)
+    if (i.source === source && (!requiredOnly || i.required !== false)) out.push(i.field as FieldOf[S]);
+  return out;
+}
+
+/**
+ * Errors of a modifier definition (empty when it can be used). Takes `unknown` on purpose: modifiers may come from
+ * plain JavaScript, so every field is checked at runtime.
+ */
+export function validateModifier(value: unknown): string[] {
   const errors: string[] = [];
-  const id = typeof m?.id === "string" ? m.id : "?";
+  const m = isRecord(value) ? value : {};
+  const id = typeof m.id === "string" ? m.id : "?";
   const err = (msg: string) => errors.push(`${id}: ${msg}`);
   if (!MODIFIER_ID.test(id)) err("id must be kebab-case (2–40 chars, a-z, 0-9, -).");
   if (typeof m.version !== "string" || !SEMVER.test(m.version)) err("version must be semver (e.g. 1.0.0).");
   if (typeof m.name !== "string" || !m.name.trim()) err("name is required.");
   if (typeof m.description !== "string" || !m.description.trim()) err("description is required.");
-  if (!Array.isArray(m.references) || m.references.length === 0)
-    err("references must list at least one peer-reviewed source or recognised guideline.");
-  else for (const r of m.references) if (!REFERENCE.test(r)) err(`reference "${r}" must be an https URL or a DOI.`);
-  if (FORBIDDEN.test(id) || FORBIDDEN.test(String(m.name)))
+  const references: readonly unknown[] = Array.isArray(m.references) ? m.references : [];
+  if (references.length === 0) err("references must list at least one peer-reviewed source or recognised guideline.");
+  for (const r of references)
+    if (typeof r !== "string" || !REFERENCE.test(r))
+      err(`reference ${JSON.stringify(r)} must be an https URL or a DOI.`);
+  if (FORBIDDEN.test(id) || (typeof m.name === "string" && FORBIDDEN.test(m.name)))
     err("ITM never rewards pain, injury, fasting, calorie deficit or weight loss.");
 
+  const inputs: readonly unknown[] = Array.isArray(m.inputs) ? m.inputs : [];
   if (!Array.isArray(m.inputs)) err("inputs must be an array.");
-  else
-    for (const input of m.inputs) {
-      const allowed: readonly string[] =
-        input.source === "athlete"
-          ? ATHLETE_FIELDS
-          : input.source === "series"
-            ? SERIES_KEYS
-            : input.source === "activity"
-              ? ACTIVITY_FIELDS
-              : [];
-      if (!allowed.includes(input.field))
-        err(`input ${String(input.source)}.${String(input.field)} is not an allowed field.`);
-    }
-
-  const params = (m.params ?? {}) as Record<string, unknown>;
-  for (const [k, raw] of Object.entries(params)) {
-    const p = raw as { default: unknown; min: unknown; max: unknown };
-    if (FORBIDDEN.test(k)) err(`param ${k}: ITM never rewards pain, injury, fasting, calorie deficit or weight loss.`);
-    const nums = [p?.default, p?.min, p?.max];
-    if (!nums.every((n) => typeof n === "number" && Number.isFinite(n)))
-      err(`param ${k} needs finite default, min and max.`);
-    else if (!((p.min as number) <= (p.default as number) && (p.default as number) <= (p.max as number)))
-      err(`param ${k}: default must be within [min, max].`);
+  for (const raw of inputs) {
+    const input = isRecord(raw) ? raw : {};
+    const allowed: readonly string[] =
+      input.source === "athlete"
+        ? ATHLETE_FIELDS
+        : input.source === "series"
+          ? SERIES_KEYS
+          : input.source === "activity"
+            ? ACTIVITY_FIELDS
+            : [];
+    if (typeof input.field !== "string" || !allowed.includes(input.field))
+      err(`input ${String(input.source)}.${String(input.field)} is not an allowed field.`);
   }
 
-  const hooks = (m.hooks ?? {}) as Record<string, unknown>;
+  const params = isRecord(m.params) ? m.params : {};
+  for (const [k, raw] of Object.entries(params)) {
+    const { default: def, min, max } = isRecord(raw) ? raw : {};
+    if (FORBIDDEN.test(k)) err(`param ${k}: ITM never rewards pain, injury, fasting, calorie deficit or weight loss.`);
+    if (!isFiniteNumber(def) || !isFiniteNumber(min) || !isFiniteNumber(max))
+      err(`param ${k} needs finite default, min and max.`);
+    else if (!(min <= def && def <= max)) err(`param ${k}: default must be within [min, max].`);
+  }
+
+  const hooks = isRecord(m.hooks) ? m.hooks : {};
   const defined = HOOKS.filter((h) => hooks[h] !== undefined);
   for (const k of Object.keys(hooks))
     if (!(HOOKS as readonly string[]).includes(k)) err(`unknown hook "${k}" (allowed: ${HOOKS.join(", ")}).`);
   for (const h of defined) if (typeof hooks[h] !== "function") err(`hook ${h} must be a function.`);
   if (defined.length === 0) err("at least one hook is required.");
-  if (Array.isArray(m.inputs) && usesBodyMass(m) && defined.some((h) => h !== "effortMultiplier"))
+  if (usesBodyMass(inputs) && defined.some((h) => h !== "effortMultiplier"))
     err("body mass may only be used to normalise effort (effortMultiplier), never decay, thresholds or readiness.");
   return errors;
 }
@@ -144,31 +169,29 @@ export function resolveModifiers(uses: readonly ModifierUse[] | undefined): Reso
     if (seen.has(modifier.id)) own.push(`${modifier.id}: used twice.`);
     seen.add(modifier.id);
     const params: ModifierParams = {};
-    for (const [k, spec] of Object.entries(modifier.params ?? {})) params[k] = spec.default;
-    for (const [k, v] of Object.entries(overrides)) {
-      const spec = modifier.params?.[k];
-      if (!spec) own.push(`${modifier.id}: unknown param "${k}".`);
-      else if (typeof v !== "number" || !Number.isFinite(v) || v < spec.min || v > spec.max)
-        own.push(`${modifier.id}: param ${k} must be between ${spec.min} and ${spec.max}.`);
-      else params[k] = v;
+    if (own.length === 0) {
+      for (const [k, spec] of Object.entries(modifier.params)) params[k] = spec.default;
+      for (const [k, v] of Object.entries(overrides)) {
+        const spec = modifier.params[k];
+        if (!spec) own.push(`${modifier.id}: unknown param "${k}".`);
+        else if (!isFiniteNumber(v) || v < spec.min || v > spec.max)
+          own.push(`${modifier.id}: param ${k} must be between ${spec.min} and ${spec.max}.`);
+        else params[k] = v;
+      }
     }
     errors.push(...own);
     if (own.length) continue;
-    const req = (source: string) =>
-      modifier.inputs.filter((i) => i.source === source && i.required !== false).map((i) => i.field);
     out.push(
       Object.freeze({
         modifier,
         params: Object.freeze(params),
-        bodyMass: usesBodyMass(modifier),
-        athleteFields: new Set(
-          modifier.inputs.filter((i) => i.source === "athlete").map((i) => i.field as AthleteField),
-        ),
-        seriesKeys: new Set(modifier.inputs.filter((i) => i.source === "series").map((i) => i.field as SeriesKey)),
+        bodyMass: usesBodyMass(modifier.inputs),
+        athleteFields: new Set(inputFields(modifier.inputs, "athlete")),
+        seriesKeys: new Set(inputFields(modifier.inputs, "series")),
         required: Object.freeze({
-          athlete: req("athlete") as AthleteField[],
-          series: req("series") as SeriesKey[],
-          activity: req("activity") as ActivityField[],
+          athlete: inputFields(modifier.inputs, "athlete", true),
+          series: inputFields(modifier.inputs, "series", true),
+          activity: inputFields(modifier.inputs, "activity", true),
         }),
       }),
     );
@@ -177,21 +200,29 @@ export function resolveModifiers(uses: readonly ModifierUse[] | undefined): Reso
   return out;
 }
 
-/** Data errors of an athlete profile (empty when it is usable). */
-export function validateAthleteProfile(p: AthleteProfile | undefined): string[] {
-  if (!p) return [];
+/** Data errors of an athlete profile (empty when it is usable). Takes `unknown`: profiles often come from storage. */
+export function validateAthleteProfile(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!isRecord(value)) return ["athlete must be an object."];
   const errors: string[] = [];
   for (const [field, [min, max]] of Object.entries(PROFILE_RANGES)) {
-    const v = p[field as keyof AthleteProfile];
-    if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max))
+    const v = value[field];
+    if (v !== undefined && !(isFiniteNumber(v) && v >= min && v <= max))
       errors.push(`athlete.${field} must be between ${min} and ${max}.`);
   }
-  if (p.sex !== undefined && p.sex !== "female" && p.sex !== "male") errors.push(`athlete.sex must be female or male.`);
-  if (p.birthDate !== undefined && !isDateOnly(p.birthDate)) errors.push("athlete.birthDate must be YYYY-MM-DD.");
-  for (const [key, values] of Object.entries(p.series ?? {})) {
-    if (![...SERIES_KEYS, "bodyMassKg"].includes(key)) errors.push(`athlete.series.${key} is not a known series.`);
-    for (const v of values ?? [])
-      if (!isDateOnly(v.date) || typeof v.value !== "number" || !Number.isFinite(v.value))
+  if (value.sex !== undefined && value.sex !== "female" && value.sex !== "male")
+    errors.push(`athlete.sex must be female or male.`);
+  if (value.birthDate !== undefined && !isDateOnly(value.birthDate))
+    errors.push("athlete.birthDate must be YYYY-MM-DD.");
+  if (value.series !== undefined && !isRecord(value.series)) errors.push("athlete.series must be an object.");
+  for (const [key, values] of Object.entries(isRecord(value.series) ? value.series : {})) {
+    if (!(PROFILE_SERIES_KEYS as readonly string[]).includes(key))
+      errors.push(`athlete.series.${key} is not a known series.`);
+    if (values === undefined) continue;
+    const entries: readonly unknown[] = Array.isArray(values) ? values : [];
+    if (!Array.isArray(values)) errors.push(`athlete.series.${key} must be an array.`);
+    for (const v of entries)
+      if (!isRecord(v) || !isDateOnly(v.date) || !isFiniteNumber(v.value))
         errors.push(`athlete.series.${key} has an invalid entry (${JSON.stringify(v)}).`);
   }
   return errors;
@@ -325,9 +356,7 @@ export function effortFactor(
     if (m.required.activity.some((k) => typeof a[k] !== "number" || !Number.isFinite(a[k]))) continue;
     const view = athlete.viewFor(m, date);
     if (!view) continue;
-    const v = run(m, "effortMultiplier", () =>
-      hook.call(m.modifier.hooks, Object.freeze({ ...a }), view, Object.freeze({ date }), m.params),
-    );
+    const v = run(m, "effortMultiplier", () => hook(Object.freeze({ ...a }), view, Object.freeze({ date }), m.params));
     f *= m.bodyMass ? clampMultiplier(v, 1, BODY_MASS_MULTIPLIER_MAX) : clampMultiplier(v);
   }
   return clampMultiplier(f);
@@ -347,9 +376,7 @@ export function decayFactor(
     if (!hook) continue;
     const view = athlete.viewFor(m, date);
     if (!view) continue;
-    f *= clampMultiplier(
-      run(m, "decayMultiplier", () => hook.call(m.modifier.hooks, Object.freeze({ date }), view, frozen, m.params)),
-    );
+    f *= clampMultiplier(run(m, "decayMultiplier", () => hook(Object.freeze({ date }), view, frozen, m.params)));
   }
   return clampMultiplier(f);
 }
@@ -367,7 +394,7 @@ export function thresholdFactor(
     if (!hook) continue;
     const view = athlete.viewFor(m, date);
     if (!view) continue;
-    f *= clampMultiplier(run(m, "thresholdMultiplier", () => hook.call(m.modifier.hooks, key, view, m.params)));
+    f *= clampMultiplier(run(m, "thresholdMultiplier", () => hook(key, view, m.params)));
   }
   return clampMultiplier(f);
 }
@@ -393,17 +420,22 @@ export function readinessAdjustment(
     if (!hook) continue;
     const view = athlete.viewFor(m, date);
     if (!view) continue;
-    const adj = run(m, "readinessRequirements", () => hook.call(m.modifier.hooks, key, view, context, m.params));
+    const adj = run(m, "readinessRequirements", () => hook(key, view, context, m.params));
     if (!adj) continue;
-    for (const k of SCALABLE) if (adj.scale?.[k] !== undefined) scale[k] *= clampMultiplier(adj.scale[k]);
-    for (const r of adj.extra ?? []) {
-      if (typeof r?.key !== "string" || typeof r.label !== "string" || typeof r.ok !== "boolean")
+    for (const k of SCALABLE) {
+      const s = adj.scale?.[k];
+      if (s !== undefined) scale[k] *= clampMultiplier(s);
+    }
+    // What a hook returns is checked at runtime too: modifiers may be plain JavaScript.
+    const extras: readonly unknown[] = adj.extra ?? [];
+    for (const r of extras) {
+      if (!isRecord(r) || typeof r.key !== "string" || typeof r.label !== "string" || typeof r.ok !== "boolean")
         throw new ItmModifierError([`${m.modifier.id}.readinessRequirements returned an invalid extra requirement.`]);
       extra.push({
         key: `${m.modifier.id}:${r.key}`,
         label: r.label,
-        have: String(r.have ?? ""),
-        need: String(r.need ?? ""),
+        have: text(r.have),
+        need: text(r.need),
         ok: r.ok,
       });
     }
@@ -411,6 +443,9 @@ export function readinessAdjustment(
   for (const k of SCALABLE) scale[k] = clampMultiplier(scale[k]);
   return { scale, extra };
 }
+
+const text = (v: unknown): string =>
+  typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : "";
 
 function deepFreeze<T>(o: T): T {
   if (o && typeof o === "object" && !Object.isFrozen(o)) {
@@ -422,7 +457,24 @@ function deepFreeze<T>(o: T): T {
 
 /** Validates a modifier definition and deep-freezes it. Throws `ItmModifierError` when it is invalid. */
 export function defineModifier<P extends ModifierParams>(m: ItmModifier<P>): ItmModifier<P> {
-  const errors = validateModifier(m as unknown as ItmModifier);
+  const errors = validateModifier(m);
   if (errors.length) throw new ItmModifierError(errors);
   return deepFreeze(m);
+}
+
+/**
+ * A modifier with some params overridden, checked at compile time against the modifier's own params:
+ *
+ * ```ts
+ * createItm({ modifiers: [withParams(ageModifier, { mastersFrom: 40 })] }); // ok
+ * createItm({ modifiers: [withParams(ageModifier, { masterFrom: 40 })] }); // type error: unknown param
+ * ```
+ *
+ * Ranges (`min`/`max`) are still checked at runtime, by `createItm` and the standalone functions.
+ */
+export function withParams<P extends ModifierParams>(
+  modifier: ItmModifier<P>,
+  params: Partial<NoInfer<P>>,
+): ModifierUse {
+  return { modifier, params };
 }

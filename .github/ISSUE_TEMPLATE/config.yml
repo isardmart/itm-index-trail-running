@@ -3,3 +3,6 @@ contact_links:
   - name: Isard Trail
     url: https://isardtrail.com
     about: The website where ITM was born.
+  - name: Report a security vulnerability
+    url: https://github.com/isardmart/itm-index-trail-running/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue (see SECURITY.md).

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { addDays, type DateOnly } from "../src/index";
 import {
   DEFAULT_ITM_CONFIG,
   itmDeltas,
@@ -20,7 +21,7 @@ import {
 const config = DEFAULT_ITM_CONFIG;
 const ITM_LEVELS = levels(config);
 const ITM_BASELINE: ItmBaseline = { date: "2025-05-01", itm: 0 };
-const simulateItm = (acts: ItmActivity[], until: string, baseline: ItmBaseline = ITM_BASELINE) =>
+const simulateItm = (acts: ItmActivity[], until: DateOnly, baseline: ItmBaseline = ITM_BASELINE) =>
   simulate(acts, until, { baseline, config });
 const itmEvents = (series: ItmDay[], acts: ItmActivity[]) => events(series, acts, { config, locale: "ca" });
 const nextItmLevel = (itm: number) => next(itm, config);
@@ -28,19 +29,19 @@ const qualifyingEffort = (a: ItmActivity) => qualifying(a, config);
 const shortRunEffort = (a: ItmActivity) => shortRun(a, config);
 const sessionCategory = (effort: number) => category(effort, config);
 
-const run = (date: string, km: number, gain = 0): ItmActivity => ({
+const run = (date: DateOnly, km: number, gain = 0): ItmActivity => ({
   date,
   type: "trail_run",
   distance_m: km * 1000,
   elevation_gain_m: gain,
 });
-const other = (date: string, type: ItmActivity["type"]): ItmActivity => ({
+const other = (date: DateOnly, type: ItmActivity["type"]): ItmActivity => ({
   date,
   type,
   distance_m: null,
   elevation_gain_m: null,
 });
-const base = { date: "2026-01-01", itm: 400 };
+const base: ItmBaseline = { date: "2026-01-01", itm: 400 };
 
 describe("sortides que compten", () => {
   it("demana 20 km esforç: 20 km plans o 15 km amb 500 m D+", () => {
@@ -67,7 +68,7 @@ describe("simulateItm", () => {
   });
   it("no hi ha deteriorament dins el marge d'una sortida i sí després", () => {
     const s = simulateItm([run("2026-01-01", 25)], "2026-01-12", base);
-    const dec = (d: string) => s.find((x) => x.date === d)!.decay;
+    const dec = (d: DateOnly) => s.find((x) => x.date === d)!.decay;
     expect(dec("2026-01-03")).toBe(0);
     expect(dec("2026-01-04")).toBe(0); // 20K: 3 dies de marge
     expect(dec("2026-01-05")).toBeGreaterThan(0);
@@ -99,13 +100,7 @@ describe("simulateItm", () => {
   });
   it("el suport només frena un temps: passades unes setmanes cau igual", () => {
     const acts: ItmActivity[] = [run("2026-01-01", 25)];
-    for (let d = 5; d < 120; d += 3)
-      acts.push(
-        other(
-          `2026-${String(1 + Math.floor((d - 1) / 30)).padStart(2, "0")}-${String(((d - 1) % 30) + 1).padStart(2, "0")}`,
-          "strength",
-        ),
-      );
+    for (let d = 5; d < 120; d += 3) acts.push(other(addDays("2026-01-01", d - 1), "strength"));
     const last = simulateItm(acts, "2026-04-30", base).at(-1)!.itm;
     expect(last).toBeLessThan(300);
   });
@@ -139,7 +134,7 @@ describe("sortides de 9 km o més", () => {
   });
   it("sumen però no tenen marge: l'endemà ja hi ha deteriorament", () => {
     const s = simulateItm([run("2026-01-01", 10, 300)], "2026-01-03", base);
-    const day = (d: string) => s.find((x) => x.date === d)!;
+    const day = (d: DateOnly) => s.find((x) => x.date === d)!;
     expect(day("2026-01-01").gain).toBe(13);
     expect(day("2026-01-02").decay).toBeGreaterThan(0);
   });

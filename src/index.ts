@@ -22,7 +22,7 @@ export {
 export { createItm, type CreateItmOptions, type Itm } from "./createItm";
 
 // Standalone functions (config as an argument, defaults to DEFAULT_ITM_CONFIG)
-export { addDays, daysBetween, isDateOnly, weekStart, type DateOnly } from "./dates";
+export { addDays, daysBetween, isDateOnly, toDateOnly, weekStart, type DateOnly } from "./dates";
 export { kmEffort } from "./effort";
 export {
   altitudeStayCut,
@@ -55,7 +55,7 @@ export {
   type Requirement,
   type RequirementKey,
 } from "./readiness";
-export type { ActivityType, AltitudeStay, ItmActivity, ItmBaseline, ItmDay } from "./types";
+export type { ActivityType, AltitudeStay, ItmActivity, ItmBaseline, ItmDay, LevelIndex } from "./types";
 
 // Presentation
 export { nextZone, zoneForItm, zoneForLevel, zones, type Zone, type ZoneKey } from "./zones";
@@ -84,6 +84,7 @@ export {
   MULTIPLIER_MIN,
   clampMultiplier,
   defineModifier,
+  withParams,
   validateAthleteProfile,
   validateModifier,
 } from "./modifiers/runtime";

@@ -9,13 +9,16 @@ changing the default results.
 - With no modifiers, results are identical to isardtrail.com (the golden test guarantees it).
 
 ```ts
-import { ageModifier, carriedLoadModifier, createItm } from "@isardtrail/itm";
+import { ageModifier, carriedLoadModifier, createItm, withParams } from "@isardtrail/itm";
 
 const itm = createItm({
-  modifiers: [ageModifier, { modifier: carriedLoadModifier, params: { maxBonus: 0.05 } }],
+  modifiers: [ageModifier, withParams(carriedLoadModifier, { maxBonus: 0.05 })],
   athlete: { birthDate: "1975-03-14", bodyMassKg: 68 },
 });
 ```
+
+`withParams` checks the overrides against the modifier's own params at compile time (a typo or a string is a type
+error); their `min`/`max` ranges are checked at runtime.
 
 ## Anatomy of a modifier
 

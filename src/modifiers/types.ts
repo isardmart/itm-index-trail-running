@@ -1,7 +1,7 @@
 import type { ItmKey } from "../config";
 import type { DateOnly } from "../dates";
 import type { ReadinessMetrics } from "../readiness";
-import type { ItmActivity } from "../types";
+import type { ItmActivity, LevelIndex } from "../types";
 
 /** Static athlete fields a modifier may declare as inputs. `age` is derived from `birthDate` (or given directly). */
 export type AthleteField = "age" | "sex" | "bodyMassKg" | "restingHr" | "maxHr" | "vo2max" | "homeAltitude";
@@ -22,16 +22,16 @@ export type DatedValue = { date: DateOnly; value: number };
  * is a no-op. The core ITM never reads it (except `homeAltitude`, which replaces `config.homeAltitude` when set).
  */
 export type AthleteProfile = {
-  birthDate?: DateOnly;
+  birthDate?: DateOnly | undefined;
   /** Used only when `birthDate` is missing; then it is treated as constant over the whole history. */
-  age?: number;
-  sex?: "female" | "male";
-  bodyMassKg?: number;
-  restingHr?: number;
-  maxHr?: number;
-  vo2max?: number;
-  homeAltitude?: number;
-  series?: Partial<Record<ProfileSeriesKey, readonly DatedValue[]>>;
+  age?: number | undefined;
+  sex?: "female" | "male" | undefined;
+  bodyMassKg?: number | undefined;
+  restingHr?: number | undefined;
+  maxHr?: number | undefined;
+  vo2max?: number | undefined;
+  homeAltitude?: number | undefined;
+  series?: Partial<Record<ProfileSeriesKey, readonly DatedValue[]>> | undefined;
 };
 
 export type InputSpec =
@@ -75,7 +75,7 @@ export type DayContext = Readonly<{ date: DateOnly }>;
 /** Engine state before today's decay, given to `decayMultiplier`. */
 export type ItmStateView = Readonly<{
   itm: number;
-  level: number;
+  level: LevelIndex;
   /** Days since the last category run (null if none yet). */
   daysSinceCategoryRun: number | null;
   /** Current support charge. */
@@ -98,20 +98,27 @@ export type ReadinessHookContext = Readonly<{ date: DateOnly; metrics: Readonly<
 export type ModifierParams = Record<string, number>;
 
 // Method syntax on purpose: it lets a modifier with typed params (`ItmModifier<{ perDecade: number }>`) be used where
-// an `ItmModifier` is expected.
+// an `ItmModifier` is expected. `this: void`: hooks are plain functions, the engine never binds `this`.
 export type ModifierHooks<P extends ModifierParams = ModifierParams> = {
   /** How much a session adds (multiplies its gain). */
-  effortMultiplier?(activity: Readonly<ItmActivity>, athlete: AthleteView, day: DayContext, params: P): number;
+  effortMultiplier?(
+    this: void,
+    activity: Readonly<ItmActivity>,
+    athlete: AthleteView,
+    day: DayContext,
+    params: Readonly<P>,
+  ): number;
   /** How fast fitness fades (multiplies the day's decay). */
-  decayMultiplier?(day: DayContext, athlete: AthleteView, state: ItmStateView, params: P): number;
+  decayMultiplier?(this: void, day: DayContext, athlete: AthleteView, state: ItmStateView, params: Readonly<P>): number;
   /** Scales a level threshold (e.g. age grading). */
-  thresholdMultiplier?(levelKey: ItmKey, athlete: AthleteView, params: P): number;
+  thresholdMultiplier?(this: void, levelKey: ItmKey, athlete: AthleteView, params: Readonly<P>): number;
   /** Adjusts or adds readiness requirements of a level. */
   readinessRequirements?(
+    this: void,
     levelKey: ItmKey,
     athlete: AthleteView,
     context: ReadinessHookContext,
-    params: P,
+    params: Readonly<P>,
   ): ReadinessAdjustment | null | undefined;
 };
 
@@ -130,5 +137,9 @@ export type ItmModifier<P extends ModifierParams = ModifierParams> = {
   hooks: ModifierHooks<P>;
 };
 
-/** A modifier with its default params, or with some params overridden. */
-export type ModifierUse = ItmModifier | { modifier: ItmModifier; params?: Partial<ModifierParams> };
+/**
+ * A modifier with its default params, or with some params overridden. Build the second form with `withParams` so the
+ * overrides are checked against the modifier's own params.
+ */
+export type ModifierUse<P extends ModifierParams = ModifierParams> =
+  ItmModifier<P> | { modifier: ItmModifier<P>; params?: Partial<P> | undefined };

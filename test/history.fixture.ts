@@ -1,10 +1,11 @@
 import type { ItmActivity } from "../src/index";
+import type { DateOnly } from "../src/index";
 
 /**
  * Historial real de sortides públiques (fecha, tipus, distància en m, desnivell en m) fins al 5-9-2026, tal com
  * el veu la web. Serveix per comprovar que la fórmula de l'ITM no es desajusta amb el temps.
  */
-const ROWS: [string, ItmActivity["type"], number, number][] = [
+const ROWS: [DateOnly, ItmActivity["type"], number, number][] = [
   ["2025-05-01", "trail_run", 13771, 785],
   ["2025-05-03", "trail_run", 7785, 230],
   ["2025-05-05", "trail_run", 7752, 256],

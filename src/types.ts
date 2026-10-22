@@ -22,12 +22,15 @@ export type AltitudeStay = { start: DateOnly; end: DateOnly; altitude_m: number 
 /** Where the series starts: the date the athlete started trail running and their ITM then (usually 0). */
 export type ItmBaseline = { date: DateOnly; itm: number };
 
+/** 0 = no level yet; 1 = 20K, 2 = 50K, 3 = 100K, 4 = 100M, 5 = UTMB. */
+export type LevelIndex = 0 | 1 | 2 | 3 | 4 | 5;
+
 export type ItmDay = {
   date: DateOnly;
   /** ITM at the end of the day, rounded to 2 decimals. */
   itm: number;
   /** 0 = no level yet; 1 = 20K … 5 = UTMB (with cushion). */
-  level: number;
+  level: LevelIndex;
   /** ITM added by the day's sessions (not rounded). */
   gain: number;
   /** ITM lost to decay that day, rounded to 2 decimals. */

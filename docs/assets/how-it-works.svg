@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 340" width="880" height="340" role="img" aria-labelledby="t d">
+  <title id="t">How ITM works</title>
+  <desc id="d">Each run becomes km effort (km + D+ / 100), boosted at altitude and by optional modifiers, and fills the ITM. Every day without a category run, ITM leaks 2 %, a leak slowed by grace days, strength and mobility, and sleeping high. The level follows the ITM with a cushion: a level is reached at its threshold and lost below 80 % of it.</desc>
+  <style>
+    .bg { fill: #fcfcfb; } .card { fill: #f3f2ee; stroke: #e0ded8; } .ink { fill: #0b0b0b; } .ink2 { fill: #52514e; }
+    .flow { stroke: #2a78d6; } .flow-head { fill: #2a78d6; } .water { fill: #2a78d6; fill-opacity: .18; }
+    .water-top { stroke: #2a78d6; } .glass { stroke: #8f8d86; } .leak { stroke: #eb6834; } .leak-head { fill: #eb6834; }
+    .drop { fill: #eb6834; } .tick { stroke: #8f8d86; } .accent { fill: #1f63b5; } .leak-ink { fill: #b8461a; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1a19; } .card { fill: #262624; stroke: #3a3936; } .ink { fill: #f0efec; } .ink2 { fill: #c3c2b7; }
+      .flow { stroke: #3987e5; } .flow-head { fill: #3987e5; } .water { fill: #3987e5; fill-opacity: .25; }
+      .water-top { stroke: #3987e5; } .glass { stroke: #8a8880; } .leak { stroke: #d95926; } .leak-head { fill: #d95926; }
+      .drop { fill: #d95926; } .tick { stroke: #8a8880; } .accent { fill: #7db3f2; } .leak-ink { fill: #f0936a; }
+    }
+    svg { font-size: 13px; } text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .h { font-size: 15px; font-weight: 700; } .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+    .step { font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path class="flow-head" d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+    <marker id="arrow-leak" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path class="leak-head" d="M0,0 L10,5 L0,10 Z"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="880" height="340" rx="16"/>
+
+  <!-- 1. Runs -->
+  <rect class="card" x="24" y="40" width="230" height="150" rx="12"/>
+  <text class="ink2 step" x="44" y="66">1 · EVERY RUN</text>
+  <text class="ink h" x="44" y="90">becomes km effort</text>
+  <text class="accent mono" x="44" y="118">km + D+ / 100</text>
+  <text class="ink2" x="44" y="146">20 km with 1,000 m D+</text>
+  <text class="ink2" x="44" y="166">→ 20 + 10 = <tspan class="ink" font-weight="700">30 km effort</tspan></text>
+
+  <line class="flow" x1="258" y1="115" x2="294" y2="115" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 2. Gain -->
+  <rect class="card" x="300" y="40" width="230" height="150" rx="12"/>
+  <text class="ink2 step" x="320" y="66">2 · GAIN</text>
+  <text class="ink h" x="320" y="90">adds to the ITM</text>
+  <text class="ink2" x="320" y="118">× altitude: up to <tspan class="ink" font-weight="700">+30 %</tspan></text>
+  <text class="ink2" x="320" y="138">  above 1,500 m</text>
+  <text class="ink2" x="320" y="164">× modifiers (optional),</text>
+  <text class="ink2" x="320" y="182">  always clamped to 0.5–1.5</text>
+
+  <line class="flow" x1="534" y1="115" x2="586" y2="115" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 3. The bucket -->
+  <text class="ink2 step" x="660" y="34" text-anchor="middle">3 · ITM</text>
+  <path class="water" d="M604,100 L716,100 L716,214 Q716,226 704,226 L616,226 Q604,226 604,214 Z"/>
+  <line class="water-top" x1="604" y1="100" x2="716" y2="100" stroke-width="2"/>
+  <path class="glass" d="M600,48 L600,214 Q600,230 616,230 L704,230 Q720,230 720,214 L720,48" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+  <g class="tick" stroke-width="1.5">
+    <line x1="720" x2="732" y1="196" y2="196"/><line x1="720" x2="732" y1="150" y2="150"/><line x1="720" x2="732" y1="80" y2="80"/>
+  </g>
+  <rect x="738" y="190" width="12" height="12" rx="3" fill="#f6dc2d"/>
+  <text class="ink" x="756" y="200.5" font-weight="700">20K</text><text class="ink2" x="788" y="200.5">110</text>
+  <rect x="738" y="144" width="12" height="12" rx="3" fill="#f0782a"/>
+  <text class="ink" x="756" y="154.5" font-weight="700">50K</text><text class="ink2" x="788" y="154.5">250</text>
+  <rect x="738" y="74" width="12" height="12" rx="3" fill="#52c458"/>
+  <text class="ink" x="756" y="84.5" font-weight="700">100K</text><text class="ink2" x="796" y="84.5">500</text>
+  <text class="ink2" x="660" y="168" text-anchor="middle" font-size="12">today's</text>
+  <text class="ink" x="660" y="188" text-anchor="middle" font-size="22" font-weight="800">ITM</text>
+
+  <!-- 4. The leak -->
+  <line class="leak" x1="660" y1="232" x2="660" y2="266" stroke-width="2" marker-end="url(#arrow-leak)"/>
+  <path class="drop" d="M660,272 q-6,10 0,14 q6,-4 0,-14 Z"/>
+  <rect class="card" x="24" y="216" width="506" height="104" rx="12"/>
+  <text class="leak-ink step" x="44" y="242">4 · DECAY</text>
+  <text class="ink h" x="44" y="266">−2 % of the ITM every day, slowed by:</text>
+  <text class="ink2" x="44" y="292">• grace days after a category run (3 for a 20K … 21 for UTMB)</text>
+  <text class="ink2" x="44" y="310">• strength &amp; mobility (up to half)   • sleeping at altitude (up to half)</text>
+  <line class="leak" x1="652" y1="296" x2="538" y2="296" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrow-leak)"/>
+
+  <!-- Equilibrium -->
+  <text class="ink2" x="856" y="320" font-size="12" text-anchor="end">Steady W km effort a week → ITM ≈ <tspan class="ink" font-weight="700">W / 0.14</tspan></text>
+</svg>

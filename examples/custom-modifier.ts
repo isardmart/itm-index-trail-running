@@ -1,6 +1,6 @@
 // How to write and use a community modifier. In your project, import from "@isardtrail/itm".
 // This file is type-checked in CI so the template never goes stale.
-import { createItm, defineModifier, type ItmActivity } from "../src/index";
+import { addDays, createItm, defineModifier, withParams, type ItmActivity } from "../src/index";
 
 /**
  * Illustrative only (not evidence-based, not a built-in): short sleep over the last week slightly speeds up decay.
@@ -32,10 +32,11 @@ const activities: ItmActivity[] = [
   { date: "2026-06-01", type: "trail_run", distance_m: 25_000, elevation_gain_m: 1200 },
   { date: "2026-06-04", type: "strength", distance_m: null, elevation_gain_m: null },
 ];
-const sleepHours = Array.from({ length: 30 }, (_, i) => ({
-  date: `2026-06-${String(i + 1).padStart(2, "0")}`,
-  value: 6,
-}));
+const sleepHours = Array.from({ length: 30 }, (_, i) => ({ date: addDays("2026-06-01", i), value: 6 }));
 
-const itm = createItm({ modifiers: [sleepExample], athlete: { series: { sleepHours } } });
+// `withParams` checks the overrides against the modifier's params: `{ minHour: 6 }` would not compile.
+const itm = createItm({
+  modifiers: [withParams(sleepExample, { minHours: 6.5 })],
+  athlete: { series: { sleepHours } },
+});
 export const series = itm.simulateItm(activities, "2026-06-30");

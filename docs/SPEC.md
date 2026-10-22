@@ -17,7 +17,7 @@ Everything here is pure and deterministic: no I/O, no clock, no global state. Th
 | `src/zones.ts`         | Presentation: mountain bands (valley → summit) mapped to ITM thresholds                                 |
 | `src/nightOut.ts`      | Night runs and nights out from Strava-like data (feeds readiness)                                       |
 | `src/strava.ts`        | `stravaAltitude` ((elev_high + elev_low) / 2) and `fromStravaActivity`                                  |
-| `src/dates.ts`         | `DateOnly` = `"YYYY-MM-DD"`; `addDays`, `daysBetween`, `weekStart` (Monday)                             |
+| `src/dates.ts`         | `DateOnly` = `"YYYY-MM-DD"`; `isDateOnly`, `toDateOnly`, `addDays`, `daysBetween`, `weekStart` (Monday) |
 | `src/createItm.ts`     | `createItm(options)`: all of the above bound to one config, locale, set of modifiers and athlete        |
 | `src/modifiers/`       | The community variable system ([MODIFIERS.md](MODIFIERS.md))                                            |
 | `test/golden.test.ts`  | Parity with the frozen original engine (`test/reference/`)                                              |
@@ -98,7 +98,7 @@ Config handling:
 ## 5. Inputs
 
 ```ts
-type DateOnly = string; // "YYYY-MM-DD", local date of the activity
+type DateOnly = `${number}-${number}-${number}`; // "YYYY-MM-DD", local date; check strings with isDateOnly/toDateOnly
 type ActivityType = "run" | "trail_run" | "hike" | "strength" | "swim" | "mobility" | "rest" | "other";
 
 type ItmActivity = {

@@ -12,6 +12,11 @@ export const ITM_KEYS = Object.freeze(["20k", "50k", "100k", "100m", "utmb"] as 
 /** A race category: `"20k" | "50k" | "100k" | "100m" | "utmb"`. */
 export type ItmKey = (typeof ITM_KEYS)[number];
 
+/** How the grace days (days without decay after a run) are given: by category (`"levels"`) or by effort (`"linear"`). */
+export const GRACE_MODES = Object.freeze(["levels", "linear"] as const);
+
+export type GraceMode = (typeof GRACE_MODES)[number];
+
 export type ItmLevelParams = {
   /** ITM at which you have the fitness of this level. */
   threshold: number;
@@ -67,6 +72,25 @@ export type ItmConfig = {
   altitudeStayMax: number;
   /** Days the stay effect lasts (fading linearly) after coming down. */
   altitudeAfterDays: number;
+  /**
+   * `"levels"` (default): grace days come from the category of the run (`levels.<key>.grace`), as always.
+   * `"linear"`: every run gives `min(graceMaxDays, km effort / graceKmPerDay)` days, categories or not.
+   */
+  graceMode: GraceMode;
+  /** Linear mode: ceiling of the grace days of one run. */
+  graceMaxDays: number;
+  /** Linear mode: km effort that give one grace day. */
+  graceKmPerDay: number;
+  /** Days before a run whose runs make its "usual pace" (median of the adjusted pace, the run itself excluded). */
+  paceWindowDays: number;
+  /** Fewer runs than this in the window → no speed extra. */
+  paceMinRuns: number;
+  /** Linear mode: largest extra (0.3 = +30 %) that a fast run (for the athlete) adds to its grace days. 0 turns it off. */
+  speedGraceMax: number;
+  /** Extra per unit of pace above the usual one: `extra = min(max, slope × (pace / usual − 1))`. */
+  speedGraceSlope: number;
+  /** Same extra applied to the km effort that a run adds, up to this (0.3 = +30 %). 0 (default) = off. */
+  speedPointsMax: number;
   levels: Record<ItmKey, ItmLevelParams>;
   readiness: Record<ItmKey, ReadinessRule>;
 };
@@ -95,6 +119,14 @@ export const DEFAULT_ITM_CONFIG: Readonly<ItmConfig> = deepFreeze<ItmConfig>({
   altitudeStayPer1000: 0.3,
   altitudeStayMax: 0.5,
   altitudeAfterDays: 14,
+  graceMode: "levels",
+  graceMaxDays: 21,
+  graceKmPerDay: 10,
+  paceWindowDays: 56,
+  paceMinRuns: 5,
+  speedGraceMax: 0.3,
+  speedGraceSlope: 2,
+  speedPointsMax: 0,
   levels: {
     "20k": { threshold: 110, minEffort: 20, grace: 3 },
     "50k": { threshold: 250, minEffort: 45, grace: 5 },
@@ -188,6 +220,14 @@ export function validateItmConfig(c: Readonly<ItmConfig>): string[] {
   between("altitudeStayPer1000", c.altitudeStayPer1000, 0, 1);
   between("altitudeStayMax", c.altitudeStayMax, 0, 0.9);
   between("altitudeAfterDays", c.altitudeAfterDays, 0, 90);
+  if (!GRACE_MODES.includes(c.graceMode)) errors.push(`graceMode must be one of ${GRACE_MODES.join(", ")}.`);
+  between("graceMaxDays", c.graceMaxDays, 0, 120);
+  between("graceKmPerDay", c.graceKmPerDay, 0.5, 1_000);
+  between("paceWindowDays", c.paceWindowDays, 1, 365);
+  between("paceMinRuns", c.paceMinRuns, 1, 100);
+  between("speedGraceMax", c.speedGraceMax, 0, 1);
+  between("speedGraceSlope", c.speedGraceSlope, 0, 20);
+  between("speedPointsMax", c.speedPointsMax, 0, 1);
   ITM_KEYS.forEach((key, i) => {
     const l = c.levels[key];
     between(`levels.${key}.threshold`, l.threshold, 1, 100_000);
@@ -220,7 +260,7 @@ const SCALAR_KEYS = (Object.keys(DEFAULT_ITM_CONFIG) as (keyof ItmConfig)[]).fil
 /** What to store: only the fields that differ from the defaults (so defaults can still evolve). */
 export function diffFromDefault(c: Readonly<ItmConfig>): ItmConfigPatch {
   const patch: ItmConfigPatch = {};
-  for (const k of SCALAR_KEYS) if (c[k] !== DEFAULT_ITM_CONFIG[k]) patch[k] = c[k];
+  for (const k of SCALAR_KEYS) if (c[k] !== DEFAULT_ITM_CONFIG[k]) (patch as Record<ScalarKey, unknown>)[k] = c[k];
   for (const key of ITM_KEYS) {
     const l = c.levels[key];
     const d = DEFAULT_ITM_CONFIG.levels[key];

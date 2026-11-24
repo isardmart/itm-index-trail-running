@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. The project follows [Semantic Versioning](https://semver.org):
 any change to default outputs is a major version (see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-semver)).
 
+## [1.1.0] — 2026-11-24
+
+### Added
+
+- `graceMode: "levels" | "linear"` (default `"levels"`: results are unchanged). In `"linear"` every run gives
+  `min(graceMaxDays, km effort / graceKmPerDay)` grace days, with fractions, and graces never add up. New config
+  fields `graceMode`, `graceMaxDays` (21), `graceKmPerDay` (10).
+- Optional `moving_time_s` on `ItmActivity`: a run faster than the athlete's own usual pace (median of the previous
+  `paceWindowDays`, at least `paceMinRuns` runs) gets more grace days (`speedGraceMax`, `speedGraceSlope`; linear mode)
+  and, off by default, more km effort (`speedPointsMax`).
+- Exports: `GRACE_MODES`, `GraceMode`, `linearGraceDays`, `adjustedPace`, `paceRatios`, `speedExtra`.
+
 ## [1.0.0] — 2026-10-21
 
 First release, extracted from the isardtrail.com engine

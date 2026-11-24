@@ -1,6 +1,6 @@
 {
   "name": "@isardtrail/itm",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "ITM · Isard Trail Meters — an open, deterministic trail-running fitness index with a pluggable, evidence-based modifier system.",
   "license": "MIT",
   "author": "Isard Trail (https://isardtrail.com)",

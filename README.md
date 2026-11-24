@@ -282,9 +282,12 @@ diffFromDefault(custom); // { decay: 0.025 } — what to store
     dates, each counted from its own day.
   - The category of each run (20K, 50K…), the requirements, the events and the labels are computed exactly as before,
     and the support brake still fades from the last _category_ run.
-  - A run of `graceKmPerDay` km effort or more every single day never lets the ITM decay (it only grows). With less
-    (5 km effort a day with the default 10) it roughly doubles the equilibrium; every two days, a 10 km effort run
-    barely moves it. Pick `graceKmPerDay` knowing that.
+  - Grace is a **budget**: in any window of `graceWindowDays` (28) days at most `graceMaxDays` (21) days are free of
+    decay, however many runs there are. Without it, a run of `graceKmPerDay` km effort or more every single day would
+    switch the decay off for good and the ITM would only ever go up; with it, such a runner still gets a very generous
+    grace (21 free days in 28) but the ITM settles. A single run (up to 21 days) is never affected. `graceWindowDays: 0`
+    removes the limit. Even so, frequent short runs weigh more than in `"levels"` mode (5 km effort a day roughly
+    doubles the equilibrium): pick `graceKmPerDay` knowing that.
 
 #### A fast run, for you, gives a bit more
 

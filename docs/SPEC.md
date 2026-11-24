@@ -59,32 +59,33 @@ Five levels, lowest to highest. Each has three configurable parameters:
 
 ## 4. Configuration (`ItmConfig`) and defaults
 
-| Field                     | Default | Meaning                                                                                     |
-| ------------------------- | ------- | ------------------------------------------------------------------------------------------- |
-| `decay`                   | 0.02    | Daily decay as a fraction of current ITM (2 %/day)                                          |
-| `supportFactor`           | 0.5     | Strongest support brake: decay multiplied by this at full support                           |
-| `supportFull`             | 2       | Support "charge" needed for the full brake (less charge → proportional brake)               |
-| `supportHalfLife`         | 7       | Days for one support session to lose half its effect                                        |
-| `supportWindow`           | 42      | Days (after the grace of the last category run) over which the support brake fades to zero  |
-| `cushion`                 | 0.8     | A level is lost only when ITM drops below `cushion × threshold`                             |
-| `shortMinKm`              | 9       | Runs ≥ this distance without category are shown as "runs that add"                          |
-| `homeAltitude`            | 12      | Altitude (m) of home on days without a stay (isardtrail.com: Barcelona)                     |
-| `altitudeFrom`            | 1500    | Altitude (m) above which altitude has an effect (**isardtrail.com stores 1000**)            |
-| `altitudeTrainingPer1000` | 0.15    | Extra fraction a run adds per 1,000 m above `altitudeFrom`…                                 |
-| `altitudeTrainingMax`     | 0.3     | …capped here (+30 %)                                                                        |
-| `altitudeStayPer1000`     | 0.3     | Decay reduction per 1,000 m above `altitudeFrom` while sleeping at altitude…                |
-| `altitudeStayMax`         | 0.5     | …capped here (half the decay)                                                               |
-| `altitudeAfterDays`       | 14      | Days the stay effect lasts (fading linearly) after coming down                              |
-| `graceMode`               | levels  | `"levels"`: grace by category (`levels.<key>.grace`); `"linear"`: grace by km effort (§6.1) |
-| `graceMaxDays`            | 21      | Linear: ceiling of the grace days of one run                                                |
-| `graceKmPerDay`           | 10      | Linear: km effort that give one grace day                                                   |
-| `paceWindowDays`          | 56      | Days (up to the run's day) whose runs make the usual pace                                   |
-| `paceMinRuns`             | 5       | Fewer other runs than this in the window → no speed extra                                   |
-| `speedGraceMax`           | 0.3     | Linear: ceiling of the extra a fast run adds to its grace days (0 = off)                    |
-| `speedGraceSlope`         | 2       | `extra = min(max, slope × (pace / usual − 1))`                                              |
-| `speedPointsMax`          | 0       | Same extra applied to the km effort that a run adds (0 = off, the default)                  |
-| `levels`                  | table   | Section 3                                                                                   |
-| `readiness`               | table   | Section 7                                                                                   |
+| Field                     | Default | Meaning                                                                                         |
+| ------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `decay`                   | 0.02    | Daily decay as a fraction of current ITM (2 %/day)                                              |
+| `supportFactor`           | 0.5     | Strongest support brake: decay multiplied by this at full support                               |
+| `supportFull`             | 2       | Support "charge" needed for the full brake (less charge → proportional brake)                   |
+| `supportHalfLife`         | 7       | Days for one support session to lose half its effect                                            |
+| `supportWindow`           | 42      | Days (after the grace of the last category run) over which the support brake fades to zero      |
+| `cushion`                 | 0.8     | A level is lost only when ITM drops below `cushion × threshold`                                 |
+| `shortMinKm`              | 9       | Runs ≥ this distance without category are shown as "runs that add"                              |
+| `homeAltitude`            | 12      | Altitude (m) of home on days without a stay (isardtrail.com: Barcelona)                         |
+| `altitudeFrom`            | 1500    | Altitude (m) above which altitude has an effect (**isardtrail.com stores 1000**)                |
+| `altitudeTrainingPer1000` | 0.15    | Extra fraction a run adds per 1,000 m above `altitudeFrom`…                                     |
+| `altitudeTrainingMax`     | 0.3     | …capped here (+30 %)                                                                            |
+| `altitudeStayPer1000`     | 0.3     | Decay reduction per 1,000 m above `altitudeFrom` while sleeping at altitude…                    |
+| `altitudeStayMax`         | 0.5     | …capped here (half the decay)                                                                   |
+| `altitudeAfterDays`       | 14      | Days the stay effect lasts (fading linearly) after coming down                                  |
+| `graceMode`               | levels  | `"levels"`: grace by category (`levels.<key>.grace`); `"linear"`: grace by km effort (§6.1)     |
+| `graceMaxDays`            | 21      | Linear: ceiling of the grace days of one run                                                    |
+| `graceWindowDays`         | 28      | Linear: in any window of this many days at most `graceMaxDays` are free of decay (0 = no limit) |
+| `graceKmPerDay`           | 10      | Linear: km effort that give one grace day                                                       |
+| `paceWindowDays`          | 56      | Days (up to the run's day) whose runs make the usual pace                                       |
+| `paceMinRuns`             | 5       | Fewer other runs than this in the window → no speed extra                                       |
+| `speedGraceMax`           | 0.3     | Linear: ceiling of the extra a fast run adds to its grace days (0 = off)                        |
+| `speedGraceSlope`         | 2       | `extra = min(max, slope × (pace / usual − 1))`                                                  |
+| `speedPointsMax`          | 0       | Same extra applied to the km effort that a run adds (0 = off, the default)                      |
+| `levels`                  | table   | Section 3                                                                                       |
+| `readiness`               | table   | Section 7                                                                                       |
 
 Config handling:
 
@@ -93,7 +94,7 @@ Config handling:
 - `validateItmConfig(c)`: list of human-readable errors (ranges per field; increasing thresholds and minEfforts).
   Ranges: decay 0.001–0.2, supportFactor 0–1, supportFull 0.5–20, supportHalfLife 1–60, supportWindow 1–365, cushion
   0.3–1, shortMinKm 0–100, homeAltitude −500–9000, altitudeFrom 0–9000, the per-1000 and max fields 0–1
-  (altitudeStayMax 0–0.9), altitudeAfterDays 0–90, threshold 1–100000, minEffort 1–1000, grace 0–120, graceMode, graceMaxDays 0–120, graceKmPerDay 0.5–1000, paceWindowDays 1–365,
+  (altitudeStayMax 0–0.9), altitudeAfterDays 0–90, threshold 1–100000, minEffort 1–1000, grace 0–120, graceMode, graceMaxDays 0–120, graceKmPerDay 0.5–1000, graceWindowDays 0–365, paceWindowDays 1–365,
   paceMinRuns 1–100, speedGraceMax and speedPointsMax 0–1, speedGraceSlope 0–20, readiness
   longest 0–1000, accumulated 0–20000, backToBack 0–2000, nights/sleptOut 0–50, support 0–14, previousRace non-empty
   list of valid keys.
@@ -197,6 +198,12 @@ grace days never add up). On a day `x` after the runs processed so far, with `n 
 `x = n + 1` → decay × `(1 − (E − n))`; later → full decay. The support brake fades with
 `1 − (x − E_cat) / supportWindow`, where `E_cat` is `E` over category runs only. Category, requirements, events and
 labels are unchanged. `levels.<key>.grace` is ignored in this mode.
+
+Budget: let `credit(x) = 1 − factor(x)` be the share of day `x` that grace would cover (1 on a free day, `E − n` on day
+`n + 1`, 0 otherwise). With `graceWindowDays = W > 0`, the credit actually given is
+`min(credit(x), max(0, graceMaxDays − Σ credit(y) for y in [x − W + 1, x − 1]))`, using the credits already given, so
+in any window of `W` days at most `graceMaxDays` days are free of decay. A single run (≤ `graceMaxDays` days) is never
+cut; a run every day is, and the ITM settles instead of growing for ever. `W = 0` disables it.
 
 Speed: `pace = kmEffort / (moving_time_s / 3600)` for running activities with distance and moving time. `usual` is the
 median `pace` of the other such runs dated in `[date − paceWindowDays, date]` (same day included, the run itself

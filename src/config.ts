@@ -81,6 +81,11 @@ export type ItmConfig = {
   graceMaxDays: number;
   /** Linear mode: km effort that give one grace day. */
   graceKmPerDay: number;
+  /**
+   * Linear mode: grace is a budget. In any window of this many days at most `graceMaxDays` days are free of decay,
+   * however many runs there are, so a run every day cannot switch the decay off for good. 0 = no limit.
+   */
+  graceWindowDays: number;
   /** Days before a run whose runs make its "usual pace" (median of the adjusted pace, the run itself excluded). */
   paceWindowDays: number;
   /** Fewer runs than this in the window → no speed extra. */
@@ -122,6 +127,7 @@ export const DEFAULT_ITM_CONFIG: Readonly<ItmConfig> = deepFreeze<ItmConfig>({
   graceMode: "levels",
   graceMaxDays: 21,
   graceKmPerDay: 10,
+  graceWindowDays: 28,
   paceWindowDays: 56,
   paceMinRuns: 5,
   speedGraceMax: 0.3,
@@ -223,6 +229,7 @@ export function validateItmConfig(c: Readonly<ItmConfig>): string[] {
   if (!GRACE_MODES.includes(c.graceMode)) errors.push(`graceMode must be one of ${GRACE_MODES.join(", ")}.`);
   between("graceMaxDays", c.graceMaxDays, 0, 120);
   between("graceKmPerDay", c.graceKmPerDay, 0.5, 1_000);
+  between("graceWindowDays", c.graceWindowDays, 0, 365);
   between("paceWindowDays", c.paceWindowDays, 1, 365);
   between("paceMinRuns", c.paceMinRuns, 1, 100);
   between("speedGraceMax", c.speedGraceMax, 0, 1);

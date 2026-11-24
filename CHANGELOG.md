@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. The project follows [Semantic Versioning](https://semver.org):
 any change to default outputs is a major version (see [CONTRIBUTING.md](CONTRIBUTING.md#versioning-semver)).
 
+## [1.2.0] — 2026-11-24
+
+### Added
+
+- `graceWindowDays` (default 28; 0 = no limit): in linear mode grace is a budget, at most `graceMaxDays` free days in any
+  window of that many days. Before, a run of `graceKmPerDay` km effort or more every day switched the decay off for good
+  and the ITM only went up. Default mode (`"levels"`) and single runs are unchanged.
+
 ## [1.1.0] — 2026-11-24
 
 ### Added

@@ -241,7 +241,7 @@ describe("fast runs", () => {
     expect(sim(future, { ...SPEED, speedPointsMax: 0.3 }, "2026-02-28")).toEqual(cut);
   });
 
-  it("frequent short runs: 5 km a day about doubles the equilibrium; a daily run of 10+ km effort never decays", () => {
+  it("frequent short runs: 5 km a day about doubles the equilibrium, and a daily run never switches the decay off for good", () => {
     const daily = (km: number) => Array.from({ length: 365 }, (_, i) => run(addDays(START, i), km, 8 + (i % 7)));
     const end = (km: number, patch: ItmConfigPatch) =>
       simulateItm(daily(km), "2026-12-31", { config: mergeItmConfig(DEFAULT_ITM_CONFIG, patch) }).at(-1)!.itm;
@@ -250,7 +250,52 @@ describe("fast runs", () => {
     // Linear: 5 km effort = half a day, so the next day only leaks half: ≈ 500.
     expect(end(5, LINEAR)).toBeGreaterThan(450);
     expect(end(5, LINEAR)).toBeLessThan(520);
-    // 10 km effort = one full day of grace, every day: nothing is ever lost (the ITM only goes up).
-    expect(end(10, LINEAR)).toBeGreaterThan(3000);
+    // 10 km effort = one full day of grace, every day. Without the budget the ITM would only ever go up; with it,
+    // 21 free days in 28 leave a decay on 1 day in 4: it settles near 10 / (0.02 / 4) = 2,000.
+    expect(end(10, { ...LINEAR, graceWindowDays: 0 })).toBeGreaterThan(3000);
+    expect(end(10, LINEAR)).toBeLessThan(2100);
+    expect(end(15, { ...LINEAR, graceKmPerDay: 10 })).toBeLessThan(3100);
+  });
+});
+
+describe("grace budget (graceWindowDays)", () => {
+  const free = (acts: ItmActivity[], patch: ItmConfigPatch, days: number) =>
+    factors(sim(acts, patch, addDays("2026-01-10", days + 1)), "2026-01-10", days);
+
+  it("a single run keeps its days: 21 free days fit in the budget", () => {
+    const f = free([run("2026-01-10", 400)], LINEAR, 24);
+    expect(f.slice(0, 21).every((x) => x === 0)).toBe(true);
+    expect(f.slice(21)).toEqual([1, 1, 1]);
+  });
+
+  it("a run every day gets at most graceMaxDays free days in any 28-day window", () => {
+    const acts = Array.from({ length: 80 }, (_, i) => run(addDays("2026-01-10", i), 15));
+    const f = free(acts, { ...LINEAR, graceKmPerDay: 15 }, 79);
+    for (let i = 0; i + 28 <= f.length; i++) {
+      const freeDays = f.slice(i, i + 28).reduce((n, x) => n + (1 - x), 0);
+      expect(freeDays).toBeLessThanOrEqual(21 + 0.51);
+    }
+    // …and the decay does come back: not every day is free.
+    expect(f.slice(21).some((x) => x > 0)).toBe(true);
+  });
+
+  it("0 switches the budget off, and it never touches the levels mode", () => {
+    const acts = Array.from({ length: 80 }, (_, i) => run(addDays("2026-01-10", i), 15));
+    const off = free(acts, { ...LINEAR, graceKmPerDay: 15, graceWindowDays: 0 }, 79);
+    expect(off.every((x) => x === 0)).toBe(true);
+    const plain = sim(acts, { graceWindowDays: 0 }, "2026-04-10");
+    expect(sim(acts, { graceWindowDays: 7, graceMaxDays: 1 }, "2026-04-10")).toEqual(plain);
+  });
+
+  it("does not move a normal history: the owner's 15 km/day series is the same with and without the budget", () => {
+    const acts = REAL_HISTORY;
+    const a = simulateItm(acts, "2026-10-21", { config: cfg({ ...LINEAR, graceKmPerDay: 15 }) });
+    const b = simulateItm(acts, "2026-10-21", { config: cfg({ ...LINEAR, graceKmPerDay: 15, graceWindowDays: 0 }) });
+    expect(a).toEqual(b);
+  });
+
+  it("validates the window", () => {
+    expect(validateItmConfig(cfg({ graceWindowDays: 0 }))).toEqual([]);
+    expect(validateItmConfig(cfg({ graceWindowDays: 400 })).join()).toContain("graceWindowDays");
   });
 });

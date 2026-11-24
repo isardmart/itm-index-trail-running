@@ -277,6 +277,8 @@ export function simulateWith(
   // Linear grace: same, for category runs only. The support brake fades from here, as it does from the category
   // run in levels mode, so short runs alone never keep it alive.
   let categoryEnd = -Infinity;
+  // Linear grace: free share (0–1) given on each day since `start`, to keep the budget (see `graceWindowDays`).
+  const credits: number[] = [];
 
   const out: ItmDay[] = [];
   let itm = start === baseline.date ? baseline.itm : 0;
@@ -294,14 +296,30 @@ export function simulateWith(
       const since = lastQual ? daysBetween(lastQual.date, d) : Infinity;
       const grace = lastQual?.grace ?? 0;
       const day = linear ? daysBetween(start, d) : 0;
-      const free = linear ? Math.floor(graceEnd) : grace;
-      if (linear ? day > free : since > grace) {
+      // Linear: share of the day's decay that grace does not cover (0 = a free day, 1 = no grace).
+      let factor = 1;
+      if (linear) {
+        const free = Math.floor(graceEnd);
+        factor = day > free + 1 ? 1 : day === free + 1 ? 1 - (graceEnd - free) : 0;
+        let credit = 1 - factor;
+        if (credit > 0 && c.graceWindowDays > 0) {
+          // Grace is a budget: at most `graceMaxDays` free days in any `graceWindowDays` window, so a run every day
+          // can never switch the decay off for good.
+          let used = 0;
+          for (let i = Math.max(0, day - c.graceWindowDays + 1); i < day; i++) used += credits[i] ?? 0;
+          credit = Math.min(credit, Math.max(0, c.graceMaxDays - used));
+          factor = 1 - credit;
+        }
+        credits[day] = credit;
+      }
+      if (linear ? factor > 0 : since > grace) {
         // Support alone does not hold fitness forever: the brake fades the longer since the last category run.
-        const fade = Math.max(0, 1 - (linear ? day - categoryEnd : since - grace) / c.supportWindow);
+        const sinceCategory = linear ? day - categoryEnd : since - grace;
+        const fade = Math.min(1, Math.max(0, 1 - sinceCategory / c.supportWindow));
         const brake = (1 - c.supportFactor) * Math.min(1, support / c.supportFull) * fade;
         decay = itm * c.decay * (1 - brake) * (1 - altitudeStayCut(d, stays, c, e.homeAltitude));
         // The first day after the whole grace days only loses what the fraction of a day does not cover.
-        if (linear && day === free + 1) decay *= 1 - (graceEnd - free);
+        if (linear) decay *= factor;
         if (decayMods)
           decay *= decayFactor(e.mods, e.athlete, d, {
             itm,

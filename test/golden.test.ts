@@ -70,6 +70,7 @@ it("the reference defaults are the package defaults", () => {
     graceMode: _a,
     graceMaxDays: _b,
     graceKmPerDay: _c,
+    graceWindowDays: _i,
     paceWindowDays: _d,
     paceMinRuns: _e,
     speedGraceMax: _f,

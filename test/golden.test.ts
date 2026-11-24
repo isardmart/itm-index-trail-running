@@ -65,7 +65,19 @@ const CONFIGS: [string, ItmConfig, number][] = [
 afterAll(() => ref.setItmConfig(REF_DEFAULT));
 
 it("the reference defaults are the package defaults", () => {
-  expect(DEFAULT_ITM_CONFIG).toEqual(REF_DEFAULT);
+  // The grace/speed fields are newer than the frozen reference: they are checked in grace.test.ts.
+  const {
+    graceMode: _a,
+    graceMaxDays: _b,
+    graceKmPerDay: _c,
+    paceWindowDays: _d,
+    paceMinRuns: _e,
+    speedGraceMax: _f,
+    speedGraceSlope: _g,
+    speedPointsMax: _h,
+    ...legacy
+  } = DEFAULT_ITM_CONFIG;
+  expect(legacy).toEqual(REF_DEFAULT);
 });
 
 for (const [name, config, n] of CONFIGS) {

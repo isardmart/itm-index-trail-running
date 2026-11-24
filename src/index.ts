@@ -6,11 +6,13 @@
 // Config
 export {
   DEFAULT_ITM_CONFIG,
+  GRACE_MODES,
   ITM_KEYS,
   ItmConfigError,
   diffFromDefault,
   mergeItmConfig,
   validateItmConfig,
+  type GraceMode,
   type ItmConfig,
   type ItmConfigPatch,
   type ItmKey,
@@ -25,17 +27,21 @@ export { createItm, type CreateItmOptions, type Itm } from "./createItm";
 export { addDays, daysBetween, isDateOnly, toDateOnly, weekStart, type DateOnly } from "./dates";
 export { kmEffort } from "./effort";
 export {
+  adjustedPace,
   altitudeStayCut,
   altitudeTrainingBonus,
   countedEffort,
   itmDeltas,
   itmEvents,
   itmOn,
+  linearGraceDays,
   nextItmLevel,
+  paceRatios,
   qualifyingEffort,
   sessionCategory,
   shortRunEffort,
   simulateItm,
+  speedExtra,
   type EngineOptions,
   type EventsOptions,
   type ItmEvent,

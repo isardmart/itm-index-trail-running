@@ -44,7 +44,8 @@ counts as 1 km):
 3. **The level follows the ITM.** Each race category has a threshold; you reach a level at its threshold and only lose
    it below 80 % of it (the cushion), so one quiet week does not take a category away.
 4. **Every day the ITM leaks 2 %** — except for a few grace days after a run of a category (3 after a 20K run, 21 after
-   a UTMB-sized one). Strength and mobility sessions and nights slept at altitude slow the leak, never fill it.
+   a UTMB-sized one; or, in the optional [linear mode](#grace-days-by-category-or-by-effort), a number of days that
+   grows with every run's km effort). Strength and mobility sessions and nights slept at altitude slow the leak, never fill it.
 
 The leak makes the number honest: training **W** km effort every week settles ITM at about **W / (7 × 2 %)**, so each
 level has a weekly volume that holds it.
@@ -170,6 +171,7 @@ type ItmActivity = {
   altitude_m?: number | null; // (elev_high + elev_low) / 2 from Strava, see stravaAltitude
   carriedLoadKg?: number | null; // modifiers only
   temperatureC?: number | null; // modifiers only
+  moving_time_s?: number | null; // moving time (s): lets a run that is fast for the athlete give a bit more grace
 };
 
 type ItmBaseline = { date: DateOnly; itm: number }; // when the athlete started, and their ITM then
@@ -266,6 +268,44 @@ const custom = mergeItmConfig(DEFAULT_ITM_CONFIG, { decay: 0.025 });
 validateItmConfig(custom); // [] when valid
 diffFromDefault(custom); // { decay: 0.025 } — what to store
 ```
+
+### Grace days: by category or by effort
+
+`graceMode` decides how the days without decay after a run are given:
+
+- `"levels"` (default, as always): only runs of a category (20K … UTMB) give grace, the days of `levels.<key>.grace`.
+- `"linear"`: **every** run (`run` and `trail_run`) gives `min(graceMaxDays, km effort / graceKmPerDay)` days (defaults
+  21 and 10), also those below the 20K category. A 19 km effort run gives 1.9 days; a 30 km effort one, 3.
+  - The fraction counts: with 1.4 days the first day has no decay and the second loses only `1 − 0.4` of the usual
+    decay.
+  - Grace days **never add up**: if a run falls inside the grace of another, the grace ends on the later of the two end
+    dates, each counted from its own day.
+  - The category of each run (20K, 50K…), the requirements, the events and the labels are computed exactly as before,
+    and the support brake still fades from the last _category_ run.
+  - A run of `graceKmPerDay` km effort or more every single day never lets the ITM decay (it only grows). With less
+    (5 km effort a day with the default 10) it roughly doubles the equilibrium; every two days, a 10 km effort run
+    barely moves it. Pick `graceKmPerDay` knowing that.
+
+#### A fast run, for you, gives a bit more
+
+Give `moving_time_s` to the running activities and a run that is faster than _the athlete's own_ usual pace gets more
+grace days. Never a fixed pace, never heart rate or any health data.
+
+1. Adjusted pace of a run = km effort / hours of moving time (climbing counts, so a hilly run is not "slow").
+2. Usual pace = the median adjusted pace of the other runs of the `paceWindowDays` (56) days up to that day, the run
+   itself excluded. With fewer than `paceMinRuns` (5) other runs there is no extra.
+3. `extra = min(speedGraceMax, speedGraceSlope × (pace / usual − 1))` when positive (defaults 0.3 and 2: 10 % faster is
+   +20 %, 15 % or more is the +30 % ceiling). It multiplies the run's grace days (always under `graceMaxDays`) and
+   never subtracts: a slower run, or one without `moving_time_s`, is exactly as if there were no speed.
+   `speedGraceMax: 0` switches it off. It only applies in `"linear"` mode.
+4. Optional, **off by default**: `speedPointsMax` (default 0) applies the same extra to the km effort that the run
+   adds to the ITM, in any mode.
+
+```ts
+const itm = createItm({ patch: { graceMode: "linear", graceKmPerDay: 15, speedGraceMax: 0 } });
+```
+
+Everything stays deterministic and causal: the value of a day depends only on what happened up to that day.
 
 There is no global state: the config is always an explicit argument, and two `createItm` instances never affect each
 other. Invalid configs throw `ItmConfigError`.

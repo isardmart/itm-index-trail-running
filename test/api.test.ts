@@ -59,6 +59,11 @@ describe("public API surface", () => {
       "zones",
       "levels",
       "createItm",
+      "GRACE_MODES",
+      "linearGraceDays",
+      "paceRatios",
+      "adjustedPace",
+      "speedExtra",
     ])
       expect(pkg, name).toHaveProperty(name);
   });

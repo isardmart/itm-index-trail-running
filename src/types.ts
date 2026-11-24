@@ -10,6 +10,11 @@ export type ItmActivity = {
   elevation_gain_m: number | null;
   /** Altitude of the activity (m), if known. From Strava: (elev_high + elev_low) / 2, see `stravaAltitude`. */
   altitude_m?: number | null;
+  /**
+   * Optional: moving time (s) of the activity. Only used in running activities with a distance, to compare the pace
+   * with the athlete's own usual pace (see `speedGraceMax`, `speedPointsMax`). Never a health datum.
+   */
+  moving_time_s?: number | null;
   /** Optional, for modifiers only: load carried (kg), e.g. a mandatory-kit pack. Never read by the core. */
   carriedLoadKg?: number | null;
   /** Optional, for modifiers only: mean air temperature (°C) during the activity. Never read by the core. */

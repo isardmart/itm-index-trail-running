@@ -57,6 +57,61 @@ const isRun = (t: ActivityType) => t === "run" || t === "trail_run";
 
 type EffortInput = Pick<ItmActivity, "type" | "distance_m" | "elevation_gain_m">;
 
+// ——— Speed (a run that is fast for the athlete) ————————————————————————————————————————————————————————————————
+
+const median = (xs: number[]): number => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+};
+
+/** Adjusted pace (km effort per hour of moving time) of a run, or null without distance or moving time. */
+export function adjustedPace(a: Pick<ItmActivity, "type" | "distance_m" | "elevation_gain_m" | "moving_time_s">) {
+  const t = a.moving_time_s;
+  if (!isRun(a.type) || !(a.distance_m != null && a.distance_m > 0) || t == null || !Number.isFinite(t) || t <= 0)
+    return null;
+  return kmEffort(a.distance_m, a.elevation_gain_m) / (t / 3600);
+}
+
+/**
+ * For each run with an adjusted pace: how much faster it is than the athlete's usual pace (`pace / usual − 1`),
+ * where usual = median adjusted pace of the other runs of the `paceWindowDays` days up to its day (same day
+ * included, the run itself excluded). Runs with fewer than `paceMinRuns` others in the window are left out.
+ * Only runs on or before a run's day are read, so the value never depends on the future.
+ */
+export function paceRatios(c: Readonly<ItmConfig>, activities: readonly ItmActivity[]): Map<ItmActivity, number> {
+  const runs = activities
+    .map((a) => ({ a, pace: adjustedPace(a) }))
+    .filter((r): r is { a: ItmActivity; pace: number } => r.pace !== null)
+    .sort((x, y) => x.a.date.localeCompare(y.a.date));
+  const out = new Map<ItmActivity, number>();
+  let lo = 0;
+  let hi = 0;
+  for (const r of runs) {
+    const from = addDays(r.a.date, -c.paceWindowDays);
+    while (runs[lo]!.a.date < from) lo++;
+    while (hi < runs.length && runs[hi]!.a.date <= r.a.date) hi++;
+    const others: number[] = [];
+    for (let i = lo; i < hi; i++) if (runs[i] !== r) others.push(runs[i]!.pace);
+    if (others.length < c.paceMinRuns) continue;
+    const usual = median(others);
+    if (usual > 0) out.set(r.a, r.pace / usual - 1);
+  }
+  return out;
+}
+
+/** Extra (0 if not faster than usual) for a pace ratio: `min(max, slope × ratio)`. */
+export function speedExtra(ratio: number | undefined, max: number, slope: number): number {
+  if (ratio === undefined || !(ratio > 0) || !(max > 0)) return 0;
+  return Math.min(max, slope * ratio);
+}
+
+/** Linear mode: grace days of one run, `min(graceMaxDays, effort / graceKmPerDay × (1 + speed extra))`. */
+export function linearGraceDays(effort: number, config: Readonly<ItmConfig> = DEFAULT_ITM_CONFIG, extra = 0): number {
+  const g = Math.min(config.graceMaxDays, (effort / config.graceKmPerDay) * (1 + extra));
+  return Math.max(0, Math.round(g * 1e6) / 1e6);
+}
+
 // ——— Altitude ———————————————————————————————————————————————————————————————————————————————————————————————————
 
 const aboveFrom = (c: Readonly<ItmConfig>, altitude: number) => Math.max(0, altitude - c.altitudeFrom) / 1000;
@@ -101,8 +156,8 @@ const boosted = (c: Readonly<ItmConfig>, effort: number, a: Pick<ItmActivity, "a
   effort * (1 + altitudeTrainingBonus(a.altitude_m, c));
 
 /** What a session adds to ITM: altitude-boosted effort, times the modifiers' effort factor. */
-export function sessionGain(e: Engine, effort: number, a: ItmActivity, date: DateOnly = a.date): number {
-  const g = boosted(e.config, effort, a);
+export function sessionGain(e: Engine, effort: number, a: ItmActivity, date: DateOnly = a.date, speed = 0): number {
+  const g = boosted(e.config, effort, a) * (speed > 0 ? 1 + speed : 1);
   return e.mods.length ? g * effortFactor(e.mods, e.athlete, a, date) : g;
 }
 
@@ -211,6 +266,18 @@ export function simulateWith(
   const baseThresholds = e.levels.map((l) => l.threshold);
   const thresholds = (d: DateOnly) => (modded ? thresholdsOn(e, d) : baseThresholds);
 
+  const linear = c.graceMode === "linear";
+  const ratios =
+    (linear && c.speedGraceMax > 0) || c.speedPointsMax > 0
+      ? paceRatios(c, activities)
+      : new Map<ItmActivity, number>();
+  // Linear grace: the day index (from `start`) up to which decay is off, with its fraction: runs do not add up, the
+  // latest end wins. -Infinity = no run yet.
+  let graceEnd = -Infinity;
+  // Linear grace: same, for category runs only. The support brake fades from here, as it does from the category
+  // run in levels mode, so short runs alone never keep it alive.
+  let categoryEnd = -Infinity;
+
   const out: ItmDay[] = [];
   let itm = start === baseline.date ? baseline.itm : 0;
   let level = nextLevel(0, itm, thresholds(start), c.cushion);
@@ -226,11 +293,15 @@ export function simulateWith(
       support *= keep;
       const since = lastQual ? daysBetween(lastQual.date, d) : Infinity;
       const grace = lastQual?.grace ?? 0;
-      if (since > grace) {
+      const day = linear ? daysBetween(start, d) : 0;
+      const free = linear ? Math.floor(graceEnd) : grace;
+      if (linear ? day > free : since > grace) {
         // Support alone does not hold fitness forever: the brake fades the longer since the last category run.
-        const fade = Math.max(0, 1 - (since - grace) / c.supportWindow);
+        const fade = Math.max(0, 1 - (linear ? day - categoryEnd : since - grace) / c.supportWindow);
         const brake = (1 - c.supportFactor) * Math.min(1, support / c.supportFull) * fade;
         decay = itm * c.decay * (1 - brake) * (1 - altitudeStayCut(d, stays, c, e.homeAltitude));
+        // The first day after the whole grace days only loses what the fraction of a day does not cover.
+        if (linear && day === free + 1) decay *= 1 - (graceEnd - free);
         if (decayMods)
           decay *= decayFactor(e.mods, e.athlete, d, {
             itm,
@@ -243,12 +314,20 @@ export function simulateWith(
     let gain = 0;
     for (const a of today) {
       const effort = qualifyingWith(e, a);
+      const ratio = ratios.get(a);
+      const points = speedExtra(ratio, c.speedPointsMax, c.speedGraceSlope);
+      if (linear && isRun(a.type)) {
+        const extra = speedExtra(ratio, c.speedGraceMax, c.speedGraceSlope);
+        const end = daysBetween(start, d) + linearGraceDays(kmEffort(a.distance_m, a.elevation_gain_m), c, extra);
+        graceEnd = Math.max(graceEnd, end);
+        if (effort !== null) categoryEnd = Math.max(categoryEnd, end);
+      }
       if (effort !== null) {
-        gain += sessionGain(e, effort, a, d);
+        gain += sessionGain(e, effort, a, d, points);
         const cat = categoryWith(e, effort)!;
         lastQual = { date: d, grace: lastQual?.date === d ? Math.max(lastQual.grace, cat.grace) : cat.grace };
       } else if (a.type !== "rest") {
-        if (isRun(a.type)) gain += sessionGain(e, kmEffort(a.distance_m, a.elevation_gain_m), a, d);
+        if (isRun(a.type)) gain += sessionGain(e, kmEffort(a.distance_m, a.elevation_gain_m), a, d, points);
         support = Math.min(support + 1, c.supportFull * 2);
       }
     }
@@ -306,9 +385,16 @@ export function eventsWith(
   const levelNames = [t.noLevel, ...e.levels.map((l) => l.label)];
   const events: ItmEvent[] = [];
   type Counted = { effort: number; gain: number; high: boolean };
+  const ratios = e.config.speedPointsMax > 0 ? paceRatios(e.config, activities) : new Map<ItmActivity, number>();
   const counted = (effort: number, a: ItmActivity): Counted => ({
     effort,
-    gain: sessionGain(e, effort, a),
+    gain: sessionGain(
+      e,
+      effort,
+      a,
+      a.date,
+      speedExtra(ratios.get(a), e.config.speedPointsMax, e.config.speedGraceSlope),
+    ),
     // "At altitude" depends on the core altitude bonus only, never on other modifiers.
     high: boosted(e.config, effort, a) > effort + 0.5,
   });
